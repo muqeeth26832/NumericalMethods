@@ -1,6 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import matrix, visualization  # Import the new visualization router
+from app.routes import (
+    matrix,
+    visualization,
+    ivpbvp,
+)  # Import the new visualization router
 
 app = FastAPI(title="Advanced Matrix Operations API", version="1.1.0")
 
@@ -18,6 +22,8 @@ app.include_router(matrix.router, prefix="/api/v1/matrix", tags=["matrix"])
 app.include_router(
     visualization.router, prefix="/api/v1/visualization", tags=["visualization"]
 )
+
+app.include_router(ivpbvp.router, prefix="/api/v1/ivpbvp", tags=["ivpbvp"])
 
 
 @app.get("/")

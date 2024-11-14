@@ -50,8 +50,7 @@ const WeightVsRoots = ({
                 activeDot={{ r: 8 }}
               />
             </LineChart>
-          </ResponsiveContainer>
-        </div>
+          </ResponsiveContainer> </div>
       )}
 
       {/* Symbolic Legendre Chart */}

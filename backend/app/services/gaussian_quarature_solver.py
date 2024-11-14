@@ -1,5 +1,9 @@
 import numpy as np
-from sympy import symbols, legendre, Matrix
+from sympy import symbols, legendre, Matrix, diff
+from numpy.polynomial import Polynomial
+from scipy.integrate import quad
+import matplotlib.pyplot as plt
+
 
 class GaussianQuadratureSolver:
     def __init__(self, n: int = 64):
@@ -16,27 +20,55 @@ class GaussianQuadratureSolver:
         weights = 2 * (eigenvectors[0, :] ** 2)
         return roots, weights
 
+    def lagrange_poly(self, x, i, roots_b):
+        """Compute the Lagrange polynomial L_i(x) at point x."""
+        L_i = 1
+        for j in range(len(roots_b)):
+            if i != j:
+                L_i *= (x - roots_b[j]) / (roots_b[i] - roots_b[j])
+        return L_i
+
+    def legendre_polynomial(self, n):
+        """Generate the Legendre polynomial of order n."""
+        # Initialize base polynomials P_0(x) = 1 and P_1(x) = x
+        P0 = Polynomial([1])  # P_0(x) = 1
+        P1 = Polynomial([0, 1])  # P_1(x) = x
+
+        for k in range(1, n):
+            P_next = ((2 * k + 1) * Polynomial([0, 1]) * P1 - k * P0) / (k + 1)
+            P0, P1 = P1, P_next
+
+        return P1
+
     def symbolic_legendre_quadrature(self):
         """Compute roots and weights symbolically using Legendre polynomial."""
-        x = symbols('x')
-        P_n = legendre(self.n, x)
-        coeffs = P_n.as_poly().all_coeffs()
-        order = len(coeffs) - 1
+        # Generate the Legendre polynomial of order n
+        Pn = self.legendre_polynomial(self.n)
 
-        # Construct companion matrix
-        companion_matrix = Matrix(order, order, lambda i, j: 1 if j == i + 1 else 0)
-        for j in range(order):
-            companion_matrix[order - 1, j] = -coeffs[j + 1] / coeffs[0]
+        # Finding the coefficients for the companion matrix
+        coefficients = Pn.coef[::-1]  # Reverse order for compatibility
 
-        # Calculate eigenvalues (roots)
-        companion_matrix = companion_matrix.evalf()
-        eigenvalues = list(companion_matrix.eigenvals().keys())
-        roots = sorted([float(val) for val in eigenvalues])
+        # Creating the companion matrix
+        companion_matrix = np.diag(np.ones(self.n - 1), -1)
+        companion_matrix[0, :] = -coefficients[1:] / coefficients[0]
 
-        # Weights calculation (requires numerical integration of Lagrange polynomials)
+        # Finding eigenvalues (roots)
+        roots = np.sort(np.linalg.eigvals(companion_matrix))
+
+        print(f"Roots of the {self.n}-th order Legendre polynomial:\n", roots)
+
+        # Finding weights by integrating the Lagrange polynomials
         weights = []
-        for root in roots:
-            weight = 2 / ((1 - root**2) * (P_n.diff(x).subs(x, root))**2)
-            weights.append(float(weight))
+        for i in range(len(roots)):
+            # Integrate L_i(x) from -1 to 1 to compute weight w_i
+            weight_i, _ = quad(self.lagrange_poly, -1, 1, args=(i, roots))
+            weights.append(weight_i)
+
+        weights = np.array(weights)
 
         return roots, weights
+
+
+# Example usage
+quadrature_solver = GaussianQuadratureSolver(n=5)  # Example with n=5
+roots, weights = quadrature_solver.symbolic_legendre_quadrature()

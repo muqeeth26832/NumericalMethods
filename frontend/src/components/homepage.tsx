@@ -24,13 +24,15 @@ export default function HomePage() {
       title: "Assignment-2",
       description: "Gauss-Legendre",
       icon: <X className="h-8 w-8" />,
-      link: "https://colab.research.google.com/drive/1Fjh6ierx5yqNAT-6Yf149xfjr4qtezX2?usp=sharing",
+      // link: "https://colab.research.google.com/drive/1Fjh6ierx5yqNAT-6Yf149xfjr4qtezX2?usp=sharing",
+      link: "/p/f/2",
     },
+
     {
       title: "Assignment-3",
       description: "IVP and BVP Solver",
       icon: <Calculator className="h-8 w-8" />,
-      link: "https://example.com/ivp-bvp-solver", // Replace with the actual link for Assignment-3
+      link: "/p/f/4", // Replace with the actual link for Assignment-3
     },
   ];
 
@@ -54,7 +56,8 @@ export default function HomePage() {
     {
       name: "Friend 4",
       image: "/images/friend4.jpg", // Replace with actual image URL
-      description: "Friend 4 is a creative thinker and excels in problem-solving.",
+      description:
+        "Friend 4 is a creative thinker and excels in problem-solving.",
     },
     {
       name: "Friend 5",
@@ -64,18 +67,22 @@ export default function HomePage() {
     {
       name: "Friend 6",
       image: "/images/friend6.jpg", // Replace with actual image URL
-      description: "Friend 6 is an expert in web development and cloud computing.",
+      description:
+        "Friend 6 is an expert in web development and cloud computing.",
     },
   ];
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-900 text-white mt-12">
       <header className="text-white py-12 text-center bg-gray-600">
-        <h1 className="text-4xl font-bold">Welcome to Our Matrix Solver Project Suite</h1>
+        <h1 className="text-4xl font-bold">
+          Welcome to Our Matrix Solver Project Suite
+        </h1>
         <p className="mt-4 text-lg text-gray-400 max-w-3xl mx-auto">
-          These tools are designed to help students and professionals solve complex matrix problems
-          efficiently. From calculating determinants to finding eigenvalues, our projects cover a wide
-          range of matrix operations.
+          These tools are designed to help students and professionals solve
+          complex matrix problems efficiently. From calculating determinants to
+          finding eigenvalues, our projects cover a wide range of matrix
+          operations.
         </p>
       </header>
 
@@ -133,7 +140,9 @@ export default function HomePage() {
                     className="w-32 h-32 bg-cover bg-center rounded-full mb-4"
                     style={{ backgroundImage: `url(${member.image})` }}
                   />
-                  <CardTitle className="text-xl font-bold text-white">{member.name}</CardTitle>
+                  <CardTitle className="text-xl font-bold text-white">
+                    {member.name}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <CardDescription className="text-center text-gray-400">
@@ -152,7 +161,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-
-
-

@@ -1,367 +1,208 @@
-// "use client";
+"use client";
+import { useState } from "react";
+import axios from "axios";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Loader2 } from "lucide-react";
 
-// import { useState } from "react";
-// import { Button } from "@/components/ui/button";
-// import { Input } from "@/components/ui/input";
-// import { Textarea } from "@/components/ui/textarea";
-// import {
-//   Card,
-//   CardContent,
-//   CardDescription,
-//   CardFooter,
-//   CardHeader,
-//   CardTitle,
-// } from "@/components/ui/card";
-// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-// import { Label } from "@/components/ui/label";
-// import { LinearAlgebraSolver } from "./linear-algebra-solver";
+// Custom component for matrix input
+const MatrixInput = ({
+  value,
+  onChange,
+}: {
+  value: number[][];
+  onChange: (newValue: number[][]) => void;
+}) => {
+  const handleCellChange = (
+    rowIndex: number,
+    colIndex: number,
+    newValue: string
+  ) => {
+    const newMatrix = value.map((row, rIndex) =>
+      row.map((cell, cIndex) =>
+        rIndex === rowIndex && cIndex === colIndex
+          ? Number(newValue) || 0
+          : cell
+      )
+    );
+    onChange(newMatrix);
+  };
 
-// export default function Component() {
-//   const [matrix, setMatrix] = useState("");
-//   const [vectorB1, setVectorB1] = useState("");
-//   const [vectorB2, setVectorB2] = useState("");
-//   const [results, setResults] = useState<{
-//     determinant?: number;
-//     conditionNumber?: number;
-//     uniqueness?: string;
-//     error?: string;
-//     characteristicPolynomial?: string;
-//     powerMethodResult?: number;
-//     inversePowerMethodResult?: number;
-//   }>({});
+  return (
+    <div className="grid grid-cols-5 gap-2">
+      {value.map((row, rowIndex) =>
+        row.map((cell, colIndex) => (
+          <Input
+            key={`${rowIndex}-${colIndex}`}
+            type="number"
+            value={cell}
+            onChange={(e) =>
+              handleCellChange(rowIndex, colIndex, e.target.value)
+            }
+            className="w-full text-center"
+          />
+        ))
+      )}
+    </div>
+  );
+};
 
-//   const handleSolve = (type: string) => {
-//     try {
-//       const solver = new LinearAlgebraSolver(matrix, vectorB1, vectorB2);
+// Custom component for vector input
+const VectorInput = ({
+  value,
+  onChange,
+}: {
+  value: number[];
+  onChange: (newValue: number[]) => void;
+}) => {
+  const handleCellChange = (index: number, newValue: string) => {
+    const newVector = value.map((cell, i) =>
+      i === index ? Number(newValue) || 0 : cell
+    );
+    onChange(newVector);
+  };
 
-//       switch (type) {
-//         case "determinant":
-//           setResults({ determinant: solver.calculateDeterminant() });
-//           break;
-//         case "condition":
-//           setResults({
-//             conditionNumber: solver.calculateConditionNumber(),
-//             uniqueness: solver.checkUniqueness(),
-//           });
-//           break;
-//         case "characteristic":
-//           setResults({
-//             characteristicPolynomial: solver.getCharacteristicPolynomial(),
-//           });
-//           break;
-//         case "powerMethod":
-//           setResults({
-//             powerMethodResult: solver.powerMethod(),
-//           });
-//           break;
-//         case "inversePowerMethod":
-//           setResults({
-//             inversePowerMethodResult: solver.inversePowerMethod(),
-//           });
-//           break;
-//         default:
-//           throw new Error("Unsupported calculation type");
-//       }
-//     } catch (error: any) {
-//       setResults({ error: error.message });
-//     }
-//   };
+  return (
+    <div className="flex space-x-2">
+      {value.map((cell, index) => (
+        <Input
+          key={index}
+          type="number"
+          value={cell}
+          onChange={(e) => handleCellChange(index, e.target.value)}
+          className="w-full text-center"
+        />
+      ))}
+    </div>
+  );
+};
 
-//   const isValidInput = () =>
-//     matrix.split(",").length === 25 &&
-//     vectorB1.split(",").length === 5 &&
-//     vectorB2.split(",").length === 5;
+export default function LinearAlgebraSolver() {
+  // State for matrix and vectors
+  const [matrix, setMatrix] = useState<number[][]>(
+    Array.from({ length: 5 }, () => Array(5).fill(0))
+  );
+  const [vectorB1, setVectorB1] = useState<number[]>(Array(5).fill(0));
+  const [vectorB2, setVectorB2] = useState<number[]>(Array(5).fill(0));
 
-//   return (
-//     <Card className="w-full max-w-4xl mx-auto">
-//       <CardHeader>
-//         <CardTitle>Linear Algebra Solver</CardTitle>
-//         <CardDescription>
-//           Enter a 5x5 matrix and two vectors to calculate various properties and
-//           solutions.
-//         </CardDescription>
-//       </CardHeader>
-//       <CardContent>
-//         <div className="space-y-4">
-//           <div>
-//             <Label htmlFor="matrix">5x5 Matrix A (comma-separated values)</Label>
-//             <Textarea
-//               id="matrix"
-//               placeholder="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25"
-//               value={matrix}
-//               onChange={(e) => setMatrix(e.target.value)}
-//               className="h-28"
-//             />
-//           </div>
-//           <div className="flex space-x-4">
-//             <div className="flex-1">
-//               <Label htmlFor="vectorB1">Vector b1 (comma-separated)</Label>
-//               <Input
-//                 id="vectorB1"
-//                 placeholder="1,2,3,4,5"
-//                 value={vectorB1}
-//                 onChange={(e) => setVectorB1(e.target.value)}
-//               />
-//             </div>
-//             <div className="flex-1">
-//               <Label htmlFor="vectorB2">Vector b2 (comma-separated)</Label>
-//               <Input
-//                 id="vectorB2"
-//                 placeholder="6,7,8,9,10"
-//                 value={vectorB2}
-//                 onChange={(e) => setVectorB2(e.target.value)}
-//               />
-//             </div>
-//           </div>
-//           <div className="grid grid-cols-2 gap-4">
-//             <Button onClick={() => handleSolve("determinant")} disabled={!isValidInput()}>
-//               Calculate Determinant
-//             </Button>
-//             <Button onClick={() => handleSolve("condition")} disabled={!isValidInput()}>
-//               Calculate Condition Number
-//             </Button>
-//             <Button onClick={() => handleSolve("characteristic")} disabled={!isValidInput()}>
-//               Get Characteristic Polynomial
-//             </Button>
-//             <Button onClick={() => handleSolve("powerMethod")} disabled={!isValidInput()}>
-//               Power Method Result
-//             </Button>
-//             <Button onClick={() => handleSolve("inversePowerMethod")} disabled={!isValidInput()}>
-//               Inverse Power Method Result
-//             </Button>
-//           </div>
-//           {results.error && (
-//             <p className="text-red-500">Error: {results.error}</p>
-//           )}
-//         </div>
-//       </CardContent>
-//       <CardFooter>
-//         <Tabs defaultValue="results" className="w-full">
-//           <TabsList className="grid w-full grid-cols-3">
-//             <TabsTrigger value="determinant">Determinant</TabsTrigger>
-//             <TabsTrigger value="condition">Condition Number</TabsTrigger>
-//             <TabsTrigger value="extra">Extras</TabsTrigger>
-//           </TabsList>
-//           <TabsContent value="determinant">
-//             <Card>
-//               <CardHeader>
-//                 <CardTitle>Determinant</CardTitle>
-//               </CardHeader>
-//               <CardContent>
-//                 <p>
-//                   Determinant:{" "}
-//                   {results.determinant !== undefined
-//                     ? results.determinant
-//                     : "N/A"}
-//                 </p>
-//               </CardContent>
-//             </Card>
-//           </TabsContent>
-//           <TabsContent value="condition">
-//             <Card>
-//               <CardHeader>
-//                 <CardTitle>Condition Number</CardTitle>
-//               </CardHeader>
-//               <CardContent>
-//                 <p>
-//                   Condition Number:{" "}
-//                   {results.conditionNumber !== undefined
-//                     ? results.conditionNumber
-//                     : "N/A"}
-//                 </p>
-//                 <p>
-//                   Uniqueness: {results.uniqueness || "Not Calculated Yet"}
-//                 </p>
-//               </CardContent>
-//             </Card>
-//           </TabsContent>
-//           <TabsContent value="extra">
-//             <Card>
-//               <CardHeader>
-//                 <CardTitle>Extra Calculations</CardTitle>
-//               </CardHeader>
-//               <CardContent>
-//                 <p>
-//                   Characteristic Polynomial:{" "}
-//                   {results.characteristicPolynomial || "N/A"}
-//                 </p>
-//                 <p>
-//                   Power Method Result:{" "}
-//                   {results.powerMethodResult !== undefined
-//                     ? results.powerMethodResult
-//                     : "N/A"}
-//                 </p>
-//                 <p>
-//                   Inverse Power Method Result:{" "}
-//                   {results.inversePowerMethodResult !== undefined
-//                     ? results.inversePowerMethodResult
-//                     : "N/A"}
-//                 </p>
-//               </CardContent>
-//             </Card>
-//           </TabsContent>
-//         </Tabs>
-//       </CardFooter>
-//     </Card>
-//   );
-// }
+  // State for results, loading, and error
+  const [results, setResults] = useState<any>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
+  // Function to handle solving
 
+  const handleSolve = async () => {
+    setLoading(true);
+    setError(null);
+    console.log("was called");
 
-// //
+    const data = {
+      matrix: matrix,
+      b1: vectorB1,
+      b2: vectorB2,
+    };
 
-// // "use client"
-// // import { useState } from "react";
-// // import { Button } from "@/components/ui/button";
-// // import { Input } from "@/components/ui/input";
-// // import { Textarea } from "@/components/ui/textarea";
-// // import {
-// //   Card,
-// //   CardContent,
-// //   CardDescription,
-// //   CardFooter,
-// //   CardHeader,
-// //   CardTitle,
-// // } from "@/components/ui/card";
-// // import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-// // import { Label } from "@/components/ui/label";
-// // import { LinearAlgebraSolver } from "./linear-algebra-solver";
+    try {
+      const response = await axios.post(
+        "http://localhost:8000/api/v1/matrix/process-matrix",
+        data // Send the structured data object
+      );
+      setResults(response.data); // Store the results from the backend
+      console.log("recieved");
+      console.log(response.data);
+    } catch (err) {
+      setError("Failed to process calculations");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-// // export default function Component() {
-// //   const [matrix, setMatrix] = useState("");
-// //   const [vectorB1, setVectorB1] = useState("");
-// //   const [vectorB2, setVectorB2] = useState("");
-// //   const [results, setResults] = useState({
-// //     eigenvalues: [] as number[],
-// //     determinant: 0,
-// //     uniqueness: "",
-// //     conditionNumber: 0,
-// //     polynomialEquation: "",
-// //     powerMethodEigenvalue: 0,
-// //     inverseEigenvalue: 0,
-// //     solution1: [] as number[],
-// //     solution2: [] as number[],
-// //   });
+  // Helper function to render results dynamically
+  const renderResult = (label: string, data: any) => (
+    <div className="space-y-2">
+      <h3 className="font-bold">{label}:</h3>
+      <pre>{JSON.stringify(data, null, 2)}</pre>
+    </div>
+  );
 
-// //   const handleSolve = () => {
-// //     try {
-// //       const solver = new LinearAlgebraSolver(matrix, vectorB1, vectorB2);
-
-// //       setResults({
-// //         eigenvalues: solver.calculateEigenvalues(),
-// //         determinant: solver.calculateDeterminant(),
-// //         uniqueness: solver.checkUniqueness(),
-// //         conditionNumber: solver.calculateConditionNumber(),
-// //         polynomialEquation: solver.getCharacteristicPolynomial(),
-// //         powerMethodEigenvalue: solver.powerMethod(),
-// //         inverseEigenvalue: solver.inversePowerMethod(),
-// //         solution1: solver.solveSystem(solver.getVectorB1),
-// //         solution2: solver.solveSystem(solver.getVectorB2),
-// //       });
-// //     } catch (error: any) {
-// //       console.error("Error solving the system:", error.message);
-// //       alert(`Error: ${error.message}`);
-// //     }
-// //   };
-
-// //   return (
-// //     <Card className="w-full max-w-4xl mx-auto">
-// //       <CardHeader>
-// //         <CardTitle>Linear Algebra Problem Solver</CardTitle>
-// //         <CardDescription>
-// //           Enter your 5x5 matrix and two b vectors to solve various linear
-// //           algebra problems.
-// //         </CardDescription>
-// //       </CardHeader>
-// //       <CardContent>
-// //         <div className="space-y-4">
-// //           <div>
-// //             <Label htmlFor="matrix">
-// //               5x5 Matrix A (comma-separated values)
-// //             </Label>
-// //             <Textarea
-// //               id="matrix"
-// //               placeholder="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25"
-// //               value={matrix}
-// //               onChange={(e) => setMatrix(e.target.value)}
-// //             />
-// //           </div>
-// //           <div className="flex space-x-4">
-// //             <div className="flex-1">
-// //               <Label htmlFor="vectorB1">Vector b1 (comma-separated)</Label>
-// //               <Input
-// //                 id="vectorB1"
-// //                 placeholder="1,2,3,4,5"
-// //                 value={vectorB1}
-// //                 onChange={(e) => setVectorB1(e.target.value)}
-// //               />
-// //             </div>
-// //             <div className="flex-1">
-// //               <Label htmlFor="vectorB2">Vector b2 (comma-separated)</Label>
-// //               <Input
-// //                 id="vectorB2"
-// //                 placeholder="6,7,8,9,10"
-// //                 value={vectorB2}
-// //                 onChange={(e) => setVectorB2(e.target.value)}
-// //               />
-// //             </div>
-// //           </div>
-// //           <Button onClick={handleSolve}>Solve</Button>
-// //         </div>
-// //       </CardContent>
-// //       <CardFooter>
-// //         <Tabs defaultValue="eigenvalues" className="w-full">
-// //           <TabsList className="grid w-full grid-cols-3">
-// //             <TabsTrigger value="eigenvalues">
-// //               Eigenvalues & Determinant
-// //             </TabsTrigger>
-// //             <TabsTrigger value="condition">Condition Number</TabsTrigger>
-// //             <TabsTrigger value="solutions">Solutions</TabsTrigger>
-// //           </TabsList>
-// //           <TabsContent value="eigenvalues">
-// //             <Card>
-// //               <CardHeader>
-// //                 <CardTitle>Eigenvalues and Determinant</CardTitle>
-// //               </CardHeader>
-// //               <CardContent>
-// //                 <p>Eigenvalues: {results.eigenvalues.join(", ")}</p>
-// //                 <p>Determinant: {results.determinant}</p>
-// //                 <p>Uniqueness: {results.uniqueness}</p>
-// //                 <p>Characteristic Polynomial: {results.polynomialEquation}</p>
-// //                 <p>Power Method Eigenvalue: {results.powerMethodEigenvalue}</p>
-// //                 <p>
-// //                   Inverse Power Method Eigenvalue: {results.inverseEigenvalue}
-// //                 </p>
-// //               </CardContent>
-// //             </Card>
-// //           </TabsContent>
-// //           <TabsContent value="condition">
-// //             <Card>
-// //               <CardHeader>
-// //                 <CardTitle>Condition Number</CardTitle>
-// //               </CardHeader>
-// //               <CardContent>
-// //                 <p>Condition Number: {results.conditionNumber}</p>
-// //                 <p>
-// //                   Compare this with the condition number of the Hilbert matrix
-// //                   for better understanding.
-// //                 </p>
-// //               </CardContent>
-// //             </Card>
-// //           </TabsContent>
-// //           <TabsContent value="solutions">
-// //             <Card>
-// //               <CardHeader>
-// //                 <CardTitle>Solutions to Ax = b</CardTitle>
-// //               </CardHeader>
-// //               <CardContent>
-// //                 <p>Solution for b1: {results.solution1.join(", ")}</p>
-// //                 <p>Solution for b2: {results.solution2.join(", ")}</p>
-// //               </CardContent>
-// //             </Card>
-// //           </TabsContent>
-// //         </Tabs>
-// //       </CardFooter>
-// //     </Card>
-// //   );
-// // }
+  return (
+    <Card className="w-full max-w-4xl mx-auto">
+      <CardHeader>
+        <CardTitle>Linear Algebra Solver</CardTitle>
+        <CardDescription>
+          Enter a 5x5 matrix and two vectors to calculate various properties and
+          solutions.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+          <Label className="block mb-2">5x5 Matrix A</Label>
+          <MatrixInput value={matrix} onChange={setMatrix} />
+          <div className="flex space-x-4">
+            <div className="flex-1">
+              <Label className="block mb-2">Vector b1</Label>
+              <VectorInput value={vectorB1} onChange={setVectorB1} />
+            </div>
+            <div className="flex-1">
+              <Label className="block mb-2">Vector b2</Label>
+              <VectorInput value={vectorB2} onChange={setVectorB2} />
+            </div>
+          </div>
+          <div className="flex space-x-4">
+            <Button onClick={handleSolve} disabled={loading}>
+              {loading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Solve
+            </Button>
+          </div>
+          {error && (
+            <Alert variant="destructive">
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+        </div>
+      </CardContent>
+      <CardFooter>
+        {results.eigenvalues &&
+          renderResult("Eigenvalues", results.eigenvalues)}
+        {results.determinant &&
+          renderResult("Determinant", results.determinant)}
+        {results.uniqueness &&
+          renderResult("Uniqueness of the System", results.uniqueness)}
+        {results.condition_comparison &&
+          renderResult(
+            "Condition Number Comparison",
+            results.condition_comparison
+          )}
+        {results.polynomial &&
+          renderResult("Polynomial Equation", results.polynomial)}
+        {results.power_method_eigenvalue &&
+          renderResult(
+            "Power Method Eigenvalue",
+            results.power_method_eigenvalue
+          )}
+        {results.inverse_power_method_eigenvalue &&
+          renderResult(
+            "Inverse Power Method Eigenvalue",
+            results.inverse_power_method_eigenvalue
+          )}
+        {results.solutions &&
+          renderResult("Solutions for Ax = b1 and Ax = b2", results.solutions)}
+      </CardFooter>
+    </Card>
+  );
+}

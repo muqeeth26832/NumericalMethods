@@ -398,6 +398,7 @@ class AccurateMatrixSolver:
         try:
             if self.L is None or self.U is None:
                 if np.isclose(self.determinant(), 0):
+                    # Check for no solution or infinite solutions
                     rank_A = np.linalg.matrix_rank(self.A)
                     rank_aug_A = np.linalg.matrix_rank(np.column_stack((self.A, b)))
                     if rank_A == rank_aug_A:
@@ -405,10 +406,18 @@ class AccurateMatrixSolver:
                     else:
                         return {"type": "no solutions"}
                 else:
+                    # Perform LU decomposition if not already done
                     self.lu_decomposition()
 
+            # Solve Ly = Pb, where P is the permutation matrix
             y = np.linalg.solve(self.L, np.dot(self.P, b))
-            return np.linalg.solve(self.U, y)
+            # Solve Ux = y
+            x = np.linalg.solve(self.U, y)
+
+            return {
+                "solution": x.tolist()
+            }  # Return solution as a list for easier JSON serialization
+
         except Exception as e:
             return {"error": f"System solving failed: {str(e)}"}
 
@@ -423,3 +432,128 @@ class AccurateMatrixSolver:
             result = self.solve_system(b)
             results[f"Ax = b{i}"] = result
         return results
+
+
+################################################
+
+# class AccurateMatrixSolver:
+#     def __init__(self, matrix, b1, b2):
+#         self.A = np.array(matrix, dtype=float)
+#         self.b1 = np.array(b1, dtype=float)
+#         self.b2 = np.array(b2, dtype=float)
+#         self.n = len(matrix)
+#         self.L = None
+#         self.U = None
+#         self.P = None
+#         self.eigenvalues = None
+
+#     def lu_decomposition(self):
+#         if np.isclose(np.linalg.det(self.A), 0):
+#             return {"error": "Matrix is singular, LU decomposition failed."}
+#         try:
+#             self.P, self.L, self.U = lu(self.A)
+#             return {"P": self.P.tolist(), "L": self.L.tolist(), "U": self.U.tolist()}
+#         except Exception as e:
+#             return {"error": f"LU decomposition failed: {str(e)}"}
+
+#     def eigenvalues_via_shift(self, shift=0.1):
+#         try:
+#             shifted_A = self.A + shift * np.eye(self.n)
+#             self.eigenvalues = np.linalg.eigvals(shifted_A)
+#             return (self.eigenvalues - shift).tolist()
+#         except Exception as e:
+#             return {"error": f"Eigenvalue calculation failed: {str(e)}"}
+
+#     def polynomial_equation(self):
+#         if self.eigenvalues is None:
+#             result = self.eigenvalues_via_shift()
+#             if "error" in result:
+#                 return result
+#         try:
+#             coefficients = np.poly(self.eigenvalues)
+#             return coefficients.tolist()
+#         except Exception as e:
+#             return {"error": f"Polynomial calculation failed: {str(e)}"}
+
+#     def determinant(self):
+#         try:
+#             return np.linalg.det(self.A)
+#         except Exception as e:
+#             return {"error": f"Determinant calculation failed: {str(e)}"}
+
+#     def is_unique(self):
+#         try:
+#             det = self.determinant()
+#             return abs(det) > 1e-10
+#         except Exception as e:
+#             return {"error": f"Uniqueness check failed: {str(e)}"}
+
+#     def condition_number_via_eigenvalues(self):
+#         eigenvalues = np.linalg.eigvals(self.A)
+#         if np.min(np.abs(eigenvalues)) == 0:
+#             return "inf"
+#         return np.max(np.abs(eigenvalues)) / np.min(np.abs(eigenvalues))
+
+#     def compare_with_hilbert(self):
+#         try:
+#             if self.n <= 1:
+#                 raise ValueError("Matrix size must be greater than 1 to compare with Hilbert matrix")
+#             hilbert_matrix = hilbert(self.n)
+#             hilbert_cond = np.linalg.cond(hilbert_matrix)
+#             our_cond = self.condition_number_via_eigenvalues()
+#             return {
+#                 "matrix_condition_number": our_cond,
+#                 "hilbert_condition_number": hilbert_cond,
+#             }
+#         except Exception as e:
+#             return {"error": f"Condition comparison failed: {str(e)}"}
+
+#     def power_method(self, inverse=False, max_iterations=1000, tol=1e-3, shift=None):
+#         try:
+#             if shift is None:
+#                 shift = 0.1 if np.any(np.isclose(np.diag(self.A), 0)) else 0.0
+#             A_shifted = self.A + shift * np.eye(self.n) if shift != 0.0 else self.A
+#             A = np.linalg.inv(A_shifted) if inverse else A_shifted
+
+#             x = np.random.rand(self.n)
+#             x /= np.linalg.norm(x)
+
+#             eigenvalue = None
+#             for _ in range(max_iterations):
+#                 x_new = np.dot(A, x)
+#                 new_eigenvalue = np.dot(x_new, x) / np.dot(x, x)
+#                 x_new /= np.linalg.norm(x_new)
+
+#                 if np.linalg.norm(x_new - x) < tol:
+#                     eigenvalue = new_eigenvalue
+#                     break
+#                 x = x_new
+
+#             return eigenvalue - shift if eigenvalue else {"error": "Power method did not converge"}
+#         except Exception as e:
+#             return {"error": f"Power method failed: {str(e)}"}
+
+#     def solve_system(self, b):
+#         try:
+#             if self.L is None or self.U is None:
+#                 if np.isclose(self.determinant(), 0):
+#                     rank_A = np.linalg.matrix_rank(self.A)
+#                     rank_aug_A = np.linalg.matrix_rank(np.column_stack((self.A, b)))
+#                     if rank_A == rank_aug_A:
+#                         return {"error": "infinite solutions"}
+#                     else:
+#                         return {"error": "no solutions"}
+#                 else:
+#                     self.lu_decomposition()
+
+#             y = np.linalg.solve(self.L, np.dot(self.P, b))
+#             return np.linalg.solve(self.U, y)
+#         except Exception as e:
+#             return {"error": f"System solving failed: {str(e)}"}
+
+#     def solve_multiple_b(self):
+#         results = {}
+#         for i, b in enumerate([self.b1, self.b2], start=1):
+#             result = self.solve_system(b)
+#             results[f"Ax = b{i}"] = result
+#         return results

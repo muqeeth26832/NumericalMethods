@@ -1,264 +1,252 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Plus, X } from "lucide-react";
+import { Loader2, X, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import LineChartComponent from "@/components/LineChart";
 
-const METHODS = [
-  { id: "explicit_euler", name: "Explicit Euler", color: "#8884d8" },
-  { id: "implicit_euler", name: "Implicit Euler", color: "#82ca9d" },
-  { id: "finite_difference", name: "Finite Difference", color: "#ffc658" },
-];
+type SolutionEntry = {
+  p_value: number;
+  y: number;
+  explicit_euler: number;
+  implicit_euler: number;
+  finite_difference: number;
+  analytical_solution: number;
+};
+
+type Solution = SolutionEntry[];
+
+type FetchSolutionsInput = {
+  P_values: number[];
+  N: number;
+};
+
+type FetchSolutionsResponse = {
+  solutions: Solution[];
+};
 
 export default function FlowComparisonPage() {
-  const [N, setN] = useState(100);
-  const [selectedPValues, setSelectedPValues] = useState<numeer[]>([2]);
-  const [selectedMethods, setSelectedMethods] = useState<string[]>([
-    "explicit_euler",
-  ]);
-  const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [N, setN] = useState<number>(100);
+  const [selectedPValues, setSelectedPValues] = useState<number[]>([-2]);
+  const [data, setData] = useState<Solution[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [newPValue, setNewPValue] = useState<string>("");
 
   const fetchData = useCallback(async () => {
-    if (selectedPValues.length === 0 || selectedMethods.length === 0) {
-      setError("Please select at least one P value and method");
+    if (selectedPValues.length === 0) {
+      setError("Please select at least one P value.");
       return;
     }
 
     setLoading(true);
     setError(null);
+    const requestData: FetchSolutionsInput = { P_values: selectedPValues, N };
+
     try {
-      const response = await axios.post(
+      const response = await axios.post<FetchSolutionsResponse>(
         "http://localhost:8000/api/v1/ivpbvp/compute_solutions",
-        {
-          P_values: selectedPValues,
-          N: N,
-          method: selectedMethods[0], // API still needs one method, we'll request all
-        }
+        requestData
       );
-
-      const solutions = response.data.solutions;
-
-      if (!solutions || !Array.isArray(solutions)) {
-        throw new Error("Invalid data structure from API");
-      }
-
-      const transformedData = solutions.flatMap((solution: any) => {
-        return Object.keys(solution.solutions)
-          .map((methodName) => {
-            if (methodName === "analytical") return null;
-            const yValues = solution.solutions[methodName];
-            const analyticalValues = solution.solutions.analytical;
-
-            return yValues.map((y: number, index: number) => ({
-              y: index / (yValues.length - 1),
-              P: solution.P,
-              method: methodName,
-              value: y,
-              analytical: analyticalValues[index],
-            }));
-          })
-          .filter(Boolean);
-      });
-
-      setData(transformedData.flat());
-      
-    } catch (error) {
-      console.error("Error fetching data:", error);
+      setData(response.data.solutions);
+    } catch (err) {
+      console.error("Error fetching data:", err);
       setError("Failed to fetch data. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, [selectedPValues, N, selectedMethods]);
+  }, [selectedPValues, N]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const handleAddPValue = () => {
-    const pValue = parseFloat(newPValue);
-    if (!isNaN(pValue) && !selectedPValues.includes(pValue)) {
-      setSelectedPValues([...selectedPValues, pValue]);
+  const handleAddPressure = () => {
+    const pValueNum = parseFloat(newPValue);
+    if (!isNaN(pValueNum) && !selectedPValues.includes(pValueNum)) {
+      setSelectedPValues((prev) => [...prev, pValueNum]);
       setNewPValue("");
     }
   };
 
-  const handleRemovePValue = (pValue: number) => {
-    setSelectedPValues(selectedPValues.filter((p) => p !== pValue));
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleAddPressure();
+    }
   };
 
-  const toggleMethod = (methodId: string) => {
-    setSelectedMethods((prev) =>
-      prev.includes(methodId)
-        ? prev.filter((m) => m !== methodId)
-        : [...prev, methodId]
-    );
+  const handleRemovePressure = (pValue: number) => {
+    setSelectedPValues((prev) => prev.filter((value) => value !== pValue));
+  };
+
+  const prepareChartData = (solutions: Solution[], p_value: number) => {
+    const x: number[] = [];
+    const explicit_euler: number[] = [];
+    const implicit_euler: number[] = [];
+    const finite_difference: number[] = [];
+    const analytical_solution: number[] = [];
+
+    solutions.forEach((solution) => {
+      solution.forEach((entry) => {
+        if (entry.p_value === p_value) {
+          x.push(entry.y);
+          explicit_euler.push(entry.explicit_euler);
+          implicit_euler.push(entry.implicit_euler);
+          finite_difference.push(entry.finite_difference);
+          analytical_solution.push(entry.analytical_solution);
+        }
+      });
+    });
+
+    return {
+      x,
+      explicit_euler,
+      implicit_euler,
+      finite_difference,
+      analytical_solution,
+    };
   };
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      <h1 className="text-3xl font-bold">Flow Comparison Analysis</h1>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="container mx-auto px-4 max-w-6xl space-y-8">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            Flow Comparison Analysis
+          </h1>
+          <p className="text-gray-600">
+            Compare different numerical methods for flow solutions
+          </p>
+        </div>
 
-      <div className="grid grid-cols-1 gap-6">
-        <Card>
+        <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle>Configuration</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <ChevronRight className="h-5 w-5 text-blue-500" />
+              Configuration Parameters
+            </CardTitle>
+            <CardDescription>
+              Set your P values and grid points to generate the flow comparison
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>P Values</Label>
-              <div className="flex flex-wrap gap-2">
-                {selectedPValues.map((p) => (
-                  <Badge
-                    key={p}
-                    variant="secondary"
-                    className="flex items-center gap-1"
-                  >
-                    {p}
-                    <X
-                      className="h-3 w-3 cursor-pointer"
-                      onClick={() => handleRemovePValue(p)}
-                    />
-                  </Badge>
-                ))}
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-semibold mb-2 block">
+                  Selected P Values
+                </Label>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {selectedPValues.map((p) => (
+                    <Badge
+                      key={p}
+                      variant="secondary"
+                      className="px-3 py-1 text-sm flex items-center gap-2 hover:bg-gray-200 transition-colors"
+                    >
+                      {p}
+                      <X
+                        className="h-3 w-3 cursor-pointer hover:text-red-500"
+                        onClick={() => handleRemovePressure(p)}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    placeholder="Enter P value"
+                    value={newPValue}
+                    onChange={(e) => setNewPValue(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    className="w-full md:w-64"
+                  />
+                  <Button onClick={handleAddPressure} variant="secondary">
+                    Add Value
+                  </Button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  value={newPValue}
-                  onChange={(e) => setNewPValue(e.target.value)}
-                  placeholder="Add P value"
-                  className="w-32"
-                />
+
+              <div className="flex items-center gap-4">
+                <div className="w-32">
+                  <Label
+                    htmlFor="grid-points"
+                    className="text-sm font-semibold"
+                  >
+                    Grid Points (N)
+                  </Label>
+                  <Input
+                    id="grid-points"
+                    type="number"
+                    value={N}
+                    onChange={(e) => setN(Number(e.target.value))}
+                    className="mt-1"
+                  />
+                </div>
                 <Button
-                  size="sm"
-                  onClick={handleAddPValue}
-                  disabled={!newPValue}
+                  onClick={fetchData}
+                  disabled={loading}
+                  className="mt-6"
+                  size="lg"
                 >
-                  <Plus className="h-4 w-4" />
+                  {loading ? (
+                    <>
+                      <Loader2 className="animate-spin mr-2" size={16} />
+                      Computing...
+                    </>
+                  ) : (
+                    "Generate Solutions"
+                  )}
                 </Button>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Methods</Label>
-              <div className="flex flex-wrap gap-2">
-                {METHODS.map((method) => (
-                  <Badge
-                    key={method.id}
-                    variant={
-                      selectedMethods.includes(method.id)
-                        ? "default"
-                        : "outline"
-                    }
-                    className="cursor-pointer"
-                    onClick={() => toggleMethod(method.id)}
-                  >
-                    {method.name}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="grid-points">Grid Points (N)</Label>
-              <Input
-                id="grid-points"
-                type="number"
-                value={N}
-                onChange={(e) => setN(Number(e.target.value))}
-                className="w-32"
-              />
-            </div>
-
-            <Button onClick={fetchData} disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Update Comparison
-            </Button>
+            {error && (
+              <Alert variant="destructive" className="mt-4">
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {selectedPValues.map((p) => (
-            <Card key={p}>
+        {data.length > 0 && (
+          <div className="w-full">
+            <Card className="shadow-lg">
               <CardHeader>
-                <CardTitle>P = {p}</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <ChevronRight className="h-5 w-5 text-blue-500" />
+                  Flow Solutions Comparison
+                </CardTitle>
+                <CardDescription>
+                  Visualization of different numerical methods
+                </CardDescription>
               </CardHeader>
-              <CardContent className="h-[400px]">
-                {loading ? (
-                  <div className="h-full flex items-center justify-center">
-                    <Loader2 className="h-8 w-8 animate-spin" />
-                  </div>
-                ) : error ? (
-                  <Alert variant="destructive">
-                    <AlertTitle>Error</AlertTitle>
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={data.filter((d) => d.P === p)}
-                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {selectedPValues.map((p_value) => (
+                    <div
+                      key={p_value}
+                      className="w-full overflow-hidden rounded-lg"
                     >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="y"
-                        type="number"
-                        domain={[0, 1]}
-                        label={{ value: "y", position: "bottom" }}
+                      <LineChartComponent
+                        data={prepareChartData(data, p_value)}
+                        height={500}
+                        width={800}
+                        x_name="Spatial Variable"
                       />
-                      <YAxis
-                        label={{ value: "u", angle: -90, position: "left" }}
-                      />
-                      <Tooltip />
-                      <Legend />
-                      {selectedMethods.map((methodId) => {
-                        const method = METHODS.find((m) => m.id === methodId);
-                        return (
-                          <Line
-                            key={methodId}
-                            type="monotone"
-                            dataKey="value"
-                            data={data.filter(
-                              (d) => d.P === p && d.method === methodId
-                            )}
-                            stroke={method?.color}
-                            name={method?.name}
-                            dot={false}
-                          />
-                        );
-                      })}
-                      <Line
-                        type="monotone"
-                        dataKey="analytical"
-                        stroke="#ff7300"
-                        name="Analytical"
-                        dot={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                )}
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

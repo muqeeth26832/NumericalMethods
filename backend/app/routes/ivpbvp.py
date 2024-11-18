@@ -1,141 +1,85 @@
-from fastapi import APIRouter
-from pydantic import BaseModel
-import numpy as np
-from scipy.optimize import root_scalar
-from typing import List, Dict
-
-router = APIRouter()
-
-# Problem parameters
-L = 1.0  # Distance between the walls
-U0 = 1.0  # Velocity at y = L
-mu = 1.0  # Dynamic viscosity
-dy = 0.01  # Step size in y
-N = int(L / dy)  # Number of steps in the y direction
-
-# Set up the grid for y
-y_vals = np.linspace(0, L, N)
+def explicit_euler(P: float, N: int, step_size: float):
+    y = np.linspace(0, 1, N)  # Grid for spatial variable y
+    u = np.zeros(N)  # Velocity profile initialized to 0
+    for n in range(1, N):
+        u[n] = u[n - 1] + step_size * (P * y[n] - u[n - 1])
+    return u.tolist()
 
 
-# Analytical solution for comparison
-def analytical_solution(P, y, L, U0):
-    return (-P / (2 * mu) * y**2) + (P * y / (2 * mu) + U0 * y / L)
+def implicit_euler(P: float, N: int, step_size: float):
+    y = np.linspace(0, 1, N)  # Grid for spatial variable y
+    u = np.zeros(N)  # Velocity profile initialized to 0
+    A = np.eye(N) - step_size * P * np.diag(
+        np.ones(N - 1), -1
+    )  # Simplified system matrix
+    for n in range(1, N):
+        u = np.linalg.solve(A, u)  # Solve for u at each timestep
+    return u.tolist()
 
 
-# Explicit Euler method for solving the ODE system
-def explicit_euler_ivp(y_range, u0, u0_prime, P, mu, dy):
-    N = len(y_range)
-    u = np.zeros(N)
-    u_prime = np.zeros(N)
-    u[0] = u0
-    u_prime[0] = u0_prime
-
-    for i in range(1, N):
-        u[i] = u[i - 1] + dy * u_prime[i - 1]
-        u_prime[i] = u_prime[i - 1] + dy * (-P / mu)
-
-    return u
-
-
-# Implicit Euler method for solving the ODE system
-def implicit_euler_ivp(y_range, u0, u0_prime, P, mu, dy):
-    N = len(y_range)
-    u = np.zeros(N)
-    u_prime = np.zeros(N)
-    u[0] = u0
-    u_prime[0] = u0_prime
-
-    for i in range(1, N):
-        # Iterative step for implicit Euler
-        u_prime[i] = u_prime[i - 1] + dy * (-P / mu)
-        u[i] = u[i - 1] + dy * u_prime[i]
-
-    return u
-
-
-# Shooting method to adjust initial slope to satisfy boundary conditions
-def shooting_method(P, mu, L, U0, dy, method="explicit"):
-    def boundary_condition_shooting(guess):
-        # Choose the solver based on the method argument
-        if method == "explicit":
-            u_vals = explicit_euler_ivp(y_vals, 0, guess, P, mu, dy)
-        elif method == "implicit":
-            u_vals = implicit_euler_ivp(y_vals, 0, guess, P, mu, dy)
-
-        # Evaluate solution at y = L
-        u_L = u_vals[-1]
-        return u_L - U0  # Difference from the desired boundary condition u(L) = U0
-
-    # Find the correct initial slope using a root-finding method
-    res = root_scalar(boundary_condition_shooting, bracket=[-10, 10], method="brentq")
-    initial_slope = res.root
-
-    # Solve the IVP with the found initial slope using the specified method
-    if method == "explicit":
-        u_solution = explicit_euler_ivp(y_vals, 0, initial_slope, P, mu, dy)
-    elif method == "implicit":
-        u_solution = implicit_euler_ivp(y_vals, 0, initial_slope, P, mu, dy)
-
-    return u_solution
-
-
-# Finite Difference method for BVP
-def finite_difference(P, mu, dy, N, U0):
+def finite_difference(P: float, N: int):
+    y = np.linspace(0, 1, N)  # Grid for spatial variable y
+    u = np.zeros(N)  # Velocity profile initialized to 0
     A = np.zeros((N, N))
     b = np.zeros(N)
 
-    # Fill matrix A for interior points
     for i in range(1, N - 1):
-        A[i, i - 1] = 1 / dy**2
-        A[i, i] = -2 / dy**2
-        A[i, i + 1] = 1 / dy**2
-        b[i] = -P / mu
+        A[i, i - 1] = -1
+        A[i, i] = 2
+        A[i, i + 1] = -1
+        b[i] = P * y[i]  # Assuming a linear source term
 
-    # Boundary conditions
-    A[0, 0] = 1  # u(0) = 0
-    A[-1, -1] = 1
-    b[-1] = U0  # u(L) = U0
+    A[0, 0] = A[N - 1, N - 1] = 1  # Boundary conditions
+    u = np.linalg.solve(A, b)  # Solve the linear system
+    return u.tolist()
 
-    # Solve the system
-    u = np.linalg.solve(A, b)
+
+def analytical_solution(P: float, N: int):
+    y = np.linspace(0, 1, N)
+    u = P * y * (1 - y)  # Simplified analytical solution
     return u
 
 
-# Request model
-class PressureRequest(BaseModel):
-    P_values: List[float]
+from fastapi import APIRouter
+from pydantic import BaseModel
+from typing import List, Optional
+import numpy as np
+
+router = APIRouter()
 
 
-# Response model
-class SolutionResponse(BaseModel):
-    P: float
-    solutions: Dict[str, List[float]]
+def compute_solution(p_value: float, N: int):
+    y = np.linspace(0, 1, N)
+
+    explicit_euler_result = explicit_euler(p_value, N, 0.01)
+    implicit_euler_result = implicit_euler(p_value, N, 0.01)
+    finite_difference_result = finite_difference(p_value, N)
+    analytical_solution_result = analytical_solution(p_value, N)
+
+    result = []
+
+    for i in range(len(y)):
+        result.append(
+            {
+                "p_value": p_value,
+                "y": y[i],
+                "explicit_euler": explicit_euler_result[i],
+                "implicit_euler": implicit_euler_result[i],
+                "finite_difference": finite_difference_result[i],
+                "analytical_solution": analytical_solution_result[i],
+            }
+        )
+    return result
 
 
 @router.post("/compute_solutions")
-def compute_solutions(request: PressureRequest):
+async def compute_solutions(data: dict):
+
+    P_values = data["P_values"]
+    N = data["N"]
+
     solutions = []
-
-    for P in request.P_values:
-        # Shooting method solution with Explicit Euler
-        u_shooting_explicit = shooting_method(P, mu, L, U0, dy, method="explicit")
-        # Shooting method solution with Implicit Euler
-        u_shooting_implicit = shooting_method(P, mu, L, U0, dy, method="implicit")
-        # Finite difference solution
-        u_fd = finite_difference(P, mu, dy, N, U0)
-        # Analytical solution
-        u_analytical = analytical_solution(P, y_vals, L, U0)
-
-        solutions.append(
-            {
-                "P": P,
-                "solutions": {
-                    "explicit_euler": u_shooting_explicit.tolist(),
-                    "implicit_euler": u_shooting_implicit.tolist(),
-                    "finite_difference": u_fd.tolist(),
-                    "analytical": u_analytical.tolist(),
-                },
-            }
-        )
-
+    for p in P_values:
+        solution = compute_solution(p, N)
+        solutions.append(solution)
     return {"solutions": solutions}

@@ -1,4 +1,5 @@
 "use client";
+
 import { useState } from "react";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
@@ -87,25 +88,67 @@ const VectorInput = ({
   );
 };
 
+// Custom component for displaying results
+// const ResultCard = ({ title, data }: { title: string; data: any }) => (
+//   <Card className="mb-4">
+//     <CardHeader>
+//       <CardTitle>{title}</CardTitle>
+//     </CardHeader>
+//     <CardContent>
+//       {typeof data === "object" ? (
+//         <pre className="bg-gray-100 p-2 rounded overflow-x-auto text-black">
+//           {data.map((item: any) => {
+//             return JSON.stringify(item, null, 2);
+//           })}
+//           {/* {JSON.stringify(data, null, 2)} */}
+//         </pre>
+//       ) : (
+//         <p>{data.toString()}</p>
+//       )}
+//     </CardContent>
+//   </Card>
+// );
+
+const ResultCard = ({ title, data }: { title: string; data: any }) => (
+  <Card className="mb-4">
+    <CardHeader>
+      <CardTitle>{title}</CardTitle>
+    </CardHeader>
+    <CardContent>
+      {Array.isArray(data) ? (
+        // If data is an array, map over the items
+        <pre className="bg-gray-100 p-2 rounded overflow-x-auto text-black">
+          {data.map((item, index) => (
+            <div key={index}>{JSON.stringify(item, null, 2)}</div>
+          ))}
+        </pre>
+      ) : typeof data === "object" && data !== null ? (
+        // If it's an object, stringify the entire object
+        <pre className="bg-gray-100 p-2 rounded overflow-x-auto text-black">
+          {JSON.stringify(data, null, 2)}
+        </pre>
+      ) : (
+        // If it's neither array nor object, display as a simple string
+        <p>{data.toString()}</p>
+      )}
+    </CardContent>
+  </Card>
+);
+
 export default function LinearAlgebraSolver() {
-  // State for matrix and vectors
   const [matrix, setMatrix] = useState<number[][]>(
     Array.from({ length: 5 }, () => Array(5).fill(0))
   );
   const [vectorB1, setVectorB1] = useState<number[]>(Array(5).fill(0));
   const [vectorB2, setVectorB2] = useState<number[]>(Array(5).fill(0));
-
-  // State for results, loading, and error
   const [results, setResults] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Function to handle solving
-
   const handleSolve = async () => {
     setLoading(true);
     setError(null);
-    console.log("was called");
+    console.log("Solving...");
 
     const data = {
       matrix: matrix,
@@ -116,11 +159,10 @@ export default function LinearAlgebraSolver() {
     try {
       const response = await axios.post(
         "http://localhost:8000/api/v1/matrix/process-matrix",
-        data // Send the structured data object
+        data
       );
-      setResults(response.data); // Store the results from the backend
-      console.log("recieved");
-      console.log(response.data);
+      setResults(response.data);
+      console.log("Results received:", response.data);
     } catch (err) {
       setError("Failed to process calculations");
       console.error(err);
@@ -128,14 +170,6 @@ export default function LinearAlgebraSolver() {
       setLoading(false);
     }
   };
-
-  // Helper function to render results dynamically
-  const renderResult = (label: string, data: any) => (
-    <div className="space-y-2">
-      <h3 className="font-bold">{label}:</h3>
-      <pre>{JSON.stringify(data, null, 2)}</pre>
-    </div>
-  );
 
   return (
     <Card className="w-full max-w-4xl mx-auto">
@@ -148,8 +182,10 @@ export default function LinearAlgebraSolver() {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          <Label className="block mb-2">5x5 Matrix A</Label>
-          <MatrixInput value={matrix} onChange={setMatrix} />
+          <div>
+            <Label className="block mb-2">5x5 Matrix A</Label>
+            <MatrixInput value={matrix} onChange={setMatrix} />
+          </div>
           <div className="flex space-x-4">
             <div className="flex-1">
               <Label className="block mb-2">Vector b1</Label>
@@ -160,14 +196,10 @@ export default function LinearAlgebraSolver() {
               <VectorInput value={vectorB2} onChange={setVectorB2} />
             </div>
           </div>
-          <div className="flex space-x-4">
-            <Button onClick={handleSolve} disabled={loading}>
-              {loading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : null}
-              Solve
-            </Button>
-          </div>
+          <Button onClick={handleSolve} disabled={loading}>
+            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Solve
+          </Button>
           {error && (
             <Alert variant="destructive">
               <AlertTitle>Error</AlertTitle>
@@ -177,31 +209,47 @@ export default function LinearAlgebraSolver() {
         </div>
       </CardContent>
       <CardFooter>
-        {results.eigenvalues &&
-          renderResult("Eigenvalues", results.eigenvalues)}
-        {results.determinant &&
-          renderResult("Determinant", results.determinant)}
-        {results.uniqueness &&
-          renderResult("Uniqueness of the System", results.uniqueness)}
-        {results.condition_comparison &&
-          renderResult(
-            "Condition Number Comparison",
-            results.condition_comparison
+        <div className="w-full space-y-4">
+          {results.eigenvalues && (
+            <ResultCard title="Eigenvalues" data={results.eigenvalues} />
           )}
-        {results.polynomial &&
-          renderResult("Polynomial Equation", results.polynomial)}
-        {results.power_method_eigenvalue &&
-          renderResult(
-            "Power Method Eigenvalue",
-            results.power_method_eigenvalue
+          {results.determinant && (
+            <ResultCard title="Determinant" data={results.determinant} />
           )}
-        {results.inverse_power_method_eigenvalue &&
-          renderResult(
-            "Inverse Power Method Eigenvalue",
-            results.inverse_power_method_eigenvalue
+          {results.uniqueness && (
+            <ResultCard
+              title="Uniqueness of the System"
+              data={results.uniqueness}
+            />
           )}
-        {results.solutions &&
-          renderResult("Solutions for Ax = b1 and Ax = b2", results.solutions)}
+          {results.condition_comparison && (
+            <ResultCard
+              title="Condition Number Comparison"
+              data={results.condition_comparison}
+            />
+          )}
+          {results.polynomial && (
+            <ResultCard title="Polynomial Equation" data={results.polynomial} />
+          )}
+          {results.power_method_eigenvalue && (
+            <ResultCard
+              title="Power Method Eigenvalue"
+              data={results.power_method_eigenvalue}
+            />
+          )}
+          {results.inverse_power_method_eigenvalue && (
+            <ResultCard
+              title="Inverse Power Method Eigenvalue"
+              data={results.inverse_power_method_eigenvalue}
+            />
+          )}
+          {results.solutions && (
+            <ResultCard
+              title="Solutions for Ax = b1 and Ax = b2"
+              data={results.solutions}
+            />
+          )}
+        </div>
       </CardFooter>
     </Card>
   );

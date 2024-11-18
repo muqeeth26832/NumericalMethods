@@ -21,9 +21,10 @@ async def process_matrix(data: dict):
     """
     try:
         # Validate that the required fields are present in the data
-        matrix_data = data.get("matrix")
-        vector_b1 = data.get("b1")
-        vector_b2 = data.get("b2")
+        matrix_data = data["matrix"]
+        vector_b1 = data["b1"]
+        vector_b2 = data["b2"]
+
         if not matrix_data or not vector_b1 or not vector_b2:
             raise HTTPException(status_code=400, detail="Missing matrix or vector data")
 
@@ -33,6 +34,7 @@ async def process_matrix(data: dict):
         b2 = np.array(vector_b2)
 
         # # Check matrix dimensions (must be 5x5) and vectors (must be 5 elements)
+
         # if matrix.shape != (5, 5):
         #     raise HTTPException(status_code=400, detail="Matrix must be 5x5")
         # if b1.shape != (5,) or b2.shape != (5,):
@@ -100,6 +102,7 @@ async def process_matrix(data: dict):
             ]
         else:
             result["inverse_power_method_eigenvalue"] = inverse_power_method_eigenvalue
+        
 
         # Solve systems Ax=b1 and Ax=b2
         solutions = solver.solve_multiple_b()

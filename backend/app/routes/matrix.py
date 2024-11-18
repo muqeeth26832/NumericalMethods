@@ -47,12 +47,15 @@ async def process_matrix(data: dict):
         result = {}
 
         # # LU decomposition
-        lu_result = solver.lu_decomposition()
-        if isinstance(lu_result, dict) and "error" in lu_result:
-            result["lu_decomposition_error"] = lu_result["error"]
-        else:
-            result["lu_decomposition"] = lu_result
+
+        # lu_result = solver.lu_decomposition()
+
+        # if isinstance(lu_result, dict) and "error" in lu_result:
+        #     result["lu_decomposition_error"] = lu_result["error"]
+        # else:
+        #     result["lu_decomposition"] = lu_result
         # # Eigenvalues via shift method (if LU failed or singular)
+
         eigenvalues = solver.eigenvalues_via_shift()
         if isinstance(eigenvalues, dict) and "error" in eigenvalues:
             result["eigenvalues_error"] = eigenvalues["error"]
@@ -81,7 +84,7 @@ async def process_matrix(data: dict):
 
         # # Power method eigenvalue for both A and inverse(A)
         power_method_eigenvalue = solver.power_method()
-        inverse_power_method_eigenvalue = solver.power_method(inverse=True,shift=1)
+        inverse_power_method_eigenvalue = solver.power_method(inverse=True, shift=1)
 
         if (
             isinstance(power_method_eigenvalue, dict)

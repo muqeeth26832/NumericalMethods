@@ -183,9 +183,10 @@ class AccurateMatrixSolver:
             if inverse:
                 if np.linalg.det(A_shifted) == 0:
                     return {"error": "Matrix is singular, cannot compute inverse."}
-                A = np.linalg.inv(A_shifted)
+                # We do not compute the inverse directly here. Instead, we apply the inverse power method to A_shifted.
+                A = A_shifted  # Use the shifted matrix directly
             else:
-                A = np.linalg.inv(A_shifted) if inverse else A_shifted
+                A = A_shifted  # Normal power method, no inversion needed
 
             # Initialize a random vector
             x = np.random.rand(self.n)
@@ -195,7 +196,9 @@ class AccurateMatrixSolver:
             converged = False
 
             for iteration in range(max_iterations):
-                x_new = np.dot(A, x)
+                # If inverse is True, we apply A^-1 on the vector, else we apply A (normal power method)
+                x_new = np.dot(A, x) if not inverse else np.linalg.inv(A).dot(x)
+
                 new_eigenvalue = np.dot(x_new, x) / np.dot(x, x)
                 x_new /= np.linalg.norm(x_new)
 
@@ -211,10 +214,16 @@ class AccurateMatrixSolver:
                     "iterations": max_iterations,
                 }
 
+            # For inverse power method, the eigenvalue is the reciprocal of the computed eigenvalue
+            if inverse:
+                eigenvalue = 1.0 / eigenvalue if eigenvalue != 0 else 0.0
+
+            # Adjust eigenvalue for shift
             return {
                 "eigenvalue": eigenvalue - shift if shift != 0 else eigenvalue,
                 "converged": converged,
                 "iterations": iteration + 1,
             }
+
         except Exception as e:
             return {"error": f"Power method failed: {str(e)}"}

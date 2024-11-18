@@ -1,119 +1,265 @@
-from fastapi import APIRouter, HTTPException
-from app.services.matrix_solver import AccurateMatrixSolver
-from typing import List
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from fastapi.responses import JSONResponse
+from app.services.matrix_solver import AccurateMatrixSolver as MatrixSolver
+from app.utils.file_handler import (
+    read_csv_matrix,
+    save_matrix_to_file,
+    read_matrix_from_file,
+)
+import os
 import numpy as np
+import logging
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
-from fastapi import APIRouter, HTTPException
-import numpy as np
-from app.services.matrix_solver import (
-    AccurateMatrixSolver,
-)  # Assuming the AccurateMatrixSolver class is imported from a module
-
-router = APIRouter()
+# Path where matrices are stored
+MATRIX_FILE_PATH = "uploaded_matrix.csv"
+VECTOR_B1_FILE_PATH = "vector_b1.csv"
+VECTOR_B2_FILE_PATH = "vector_b2.csv"
 
 
-@router.post("/process-matrix")
-async def process_matrix(data: dict):
-    """
-    Processes the matrix and performs the required operations for Eigenvalue, determinant, condition number, etc.
-    """
+def get_matrix_solver():
+    if not os.path.exists(MATRIX_FILE_PATH):
+        raise HTTPException(status_code=400, detail="Please upload a matrix first")
+
     try:
-        # Validate that the required fields are present in the data
-        matrix_data = data["matrix"]
-        vector_b1 = data["b1"]
-        vector_b2 = data["b2"]
-
-        if not matrix_data or not vector_b1 or not vector_b2:
-            raise HTTPException(status_code=400, detail="Missing matrix or vector data")
-
-        # Ensure the matrix and vectors are valid and can be converted to NumPy arrays
-        matrix = np.array(matrix_data)
-        b1 = np.array(vector_b1)
-        b2 = np.array(vector_b2)
-
-        # # Check matrix dimensions (must be 5x5) and vectors (must be 5 elements)
-
-        # if matrix.shape != (5, 5):
-        #     raise HTTPException(status_code=400, detail="Matrix must be 5x5")
-        # if b1.shape != (5,) or b2.shape != (5,):
-        #     raise HTTPException(status_code=400, detail="Vectors must have 5 elements")
-
-        # # Initialize the matrix solver with the input matrix and b1, b2 vectors
-        solver = AccurateMatrixSolver(matrix, b1, b2)
-
-        # # Initialize result dictionary
-        result = {}
-
-        # # LU decomposition
-
-        # lu_result = solver.lu_decomposition()
-
-        # if isinstance(lu_result, dict) and "error" in lu_result:
-        #     result["lu_decomposition_error"] = lu_result["error"]
-        # else:
-        #     result["lu_decomposition"] = lu_result
-        # # Eigenvalues via shift method (if LU failed or singular)
-
-        eigenvalues = solver.eigenvalues_via_shift()
-        if isinstance(eigenvalues, dict) and "error" in eigenvalues:
-            result["eigenvalues_error"] = eigenvalues["error"]
-        else:
-            result["eigenvalues"] = eigenvalues
-
-        # Determinant
-        determinant = solver.determinant()
-        if isinstance(determinant, dict) and "error" in determinant:
-            result["determinant_error"] = determinant["error"]
-        else:
-            result["determinant"] = determinant
-
-        # # Condition number comparison with Hilbert matrix
-        condition_comparison = solver.compare_with_hilbert()
-        if isinstance(condition_comparison, dict) and "error" in condition_comparison:
-            result["condition_comparison_error"] = condition_comparison["error"]
-        else:
-            result["condition_comparison"] = condition_comparison
-
-        # # Polynomial equation of eigenvalues
-        polynomial = solver.polynomial_equation()
-        if isinstance(polynomial, dict) and "error" in polynomial:
-            result["polynomial_error"] = polynomial["error"]
-        else:
-            result["polynomial"] = polynomial
-
-        # # Power method eigenvalue for both A and inverse(A)
-        power_method_eigenvalue = solver.power_method()
-        inverse_power_method_eigenvalue = solver.power_method(inverse=True, shift=1)
-
-        if (
-            isinstance(power_method_eigenvalue, dict)
-            and "error" in power_method_eigenvalue
-        ):
-            result["power_method_error"] = power_method_eigenvalue["error"]
-        else:
-            result["power_method_eigenvalue"] = power_method_eigenvalue
-
-        if (
-            isinstance(inverse_power_method_eigenvalue, dict)
-            and "error" in inverse_power_method_eigenvalue
-        ):
-            result["inverse_power_method_error"] = inverse_power_method_eigenvalue[
-                "error"
-            ]
-        else:
-            result["inverse_power_method_eigenvalue"] = inverse_power_method_eigenvalue
-
-        # Solve systems Ax=b1 and Ax=b2
-        solutions = solver.solve_multiple_b()
-        if isinstance(solutions, dict) and "error" in solutions:
-            result["solutions_error"] = solutions["error"]
-        else:
-            result["solutions"] = solutions
-
-        # Return all results as JSON
-        return result
-
+        matrix_A = read_matrix_from_file(MATRIX_FILE_PATH)
+        vector_b1 = read_matrix_from_file(VECTOR_B1_FILE_PATH)
+        vector_b2 = read_matrix_from_file(VECTOR_B2_FILE_PATH)
     except Exception as e:
-        return {"error": str(e)}
+        logger.error(f"Error reading matrix files: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error reading matrix files")
+
+    return MatrixSolver(np.array(matrix_A), np.array(vector_b1), np.array(vector_b2))
+
+
+@router.post("/upload/")
+async def upload_matrix(file: UploadFile = File(...)):
+    try:
+        matrix_data = await read_csv_matrix(file)
+
+        save_matrix_to_file(matrix_data["matrix_A"], MATRIX_FILE_PATH)
+        save_matrix_to_file(matrix_data["vector_b1"], VECTOR_B1_FILE_PATH)
+        save_matrix_to_file(matrix_data["vector_b2"], VECTOR_B2_FILE_PATH)
+
+        return {
+            "message": "Matrix and vectors uploaded successfully",
+            "data": {
+                "matrix_A": matrix_data["matrix_A"].tolist(),
+                "vector_b1": matrix_data["vector_b1"].tolist(),
+                "vector_b2": matrix_data["vector_b2"].tolist(),
+            },
+        }
+    except ValueError as ve:
+        logger.error(f"Invalid matrix format: {str(ve)}")
+        return {"OOPS!!": str(ve)}
+    except Exception as e:
+        logger.error(f"Error uploading matrix: {str(e)}")
+        return {"OOPS!!": f"Error saving matrix: {str(e)}"}
+
+
+@router.get("/eigenvalues/")
+async def get_eigenvalues(solver: MatrixSolver = Depends(get_matrix_solver)):
+    try:
+        eigenvalues = solver.eigenvalues_via_lu()
+
+        # Prepare eigenvalues in a JSON-compatible format
+        eigenvalues_list = []
+        for eigenvalue in eigenvalues:
+            if isinstance(eigenvalue, complex):
+                # If it's a complex number, return a dict with real and imaginary parts
+                eigenvalues_list.append(
+                    {"real": eigenvalue.real, "imag": eigenvalue.imag}
+                )
+            else:
+                # If it's a real number, append it as is
+                eigenvalues_list.append(eigenvalue)
+
+        return {"eigenvalues": eigenvalues_list}
+    except np.linalg.LinAlgError as lae:
+        logger.error(f"Linear algebra error calculating eigenvalues: {str(lae)}")
+        return {
+            "OOPS!!": "Failed to calculate eigenvalues. The matrix may be singular."
+        }
+    except Exception as e:
+        logger.error(f"Error calculating eigenvalues: {str(e)}")
+        return {"OOPS!!": "Unexpected error calculating eigenvalues"}
+
+
+@router.get("/determinant/")
+async def get_determinant(solver: MatrixSolver = Depends(get_matrix_solver)):
+    try:
+        determinant = solver.determinant()
+        is_unique = "unique" if abs(determinant) > 1e-10 else "not unique"
+        return {"determinant": float(determinant), "uniqness": is_unique}
+    except np.linalg.LinAlgError as lae:
+        logger.error(f"Linear algebra error calculating determinant: {str(lae)}")
+        return {
+            "OOPS!!": "Failed to calculate determinant. The matrix may be singular."
+        }
+    except Exception as e:
+        logger.error(f"Error calculating determinant: {str(e)}")
+        return {"OOPS!!": "Unexpected error calculating determinant"}
+
+
+@router.get("/condition-number/")
+async def get_condition_number(solver: MatrixSolver = Depends(get_matrix_solver)):
+    try:
+        condition_number = solver.condition_number_via_eigenvalues()
+        hilbert_condition = solver.compare_with_hilbert()[1]
+
+        matrix_condition = (
+            "Infinity" if np.isinf(condition_number) else float(condition_number)
+        )
+        hilbert_condition_str = (
+            "Infinity" if np.isinf(hilbert_condition) else float(hilbert_condition)
+        )
+
+        return {
+            "matrix_condition": matrix_condition,
+            "hilbert_condition": hilbert_condition_str,
+        }
+    except np.linalg.LinAlgError as lae:
+        logger.error(f"Linear algebra error calculating condition number: {str(lae)}")
+        return {
+            "OOPS!!": "Failed to calculate condition number. The matrix may be singular."
+        }
+    except Exception as e:
+        logger.error(f"Error calculating condition number: {str(e)}")
+        return {"OOPS!!": "Unexpected error calculating condition number"}
+
+
+@router.get("/polynomial-equation/")
+async def get_polynomial_equation(solver: MatrixSolver = Depends(get_matrix_solver)):
+    try:
+        coefficients = solver.polynomial_equation()
+        print(coefficients)
+        return {"coefficients": coefficients.tolist()}
+    except np.linalg.LinAlgError as lae:
+        logger.error(
+            f"Linear algebra error calculating polynomial equation: {str(lae)}"
+        )
+        return {
+            "OOPS!!": "Failed to calculate polynomial equation. The matrix may be singular."
+        }
+    except Exception as e:
+        logger.error(f"Error calculating polynomial equation: {str(e)}")
+        return {"OOPS!!": "Unexpected error calculating polynomial equation"}
+
+
+@router.get("/power-method/")
+async def power_method(solver: MatrixSolver = Depends(get_matrix_solver)):
+    try:
+        largest_eigenvalue_A = solver.power_method()
+        largest_eigenvalue_inverse_A = solver.power_method(inverse=True)
+        lu_eigenvalues = solver.eigenvalues_via_lu()
+
+        # Prepare eigenvalues in a JSON-compatible format
+        eigenvalues_list = []
+        for eigenvalue in lu_eigenvalues:
+            if isinstance(eigenvalue, complex):
+                # If it's a complex number, return a dict with real and imaginary parts
+                eigenvalues_list.append(
+                    {"real": eigenvalue.real, "imag": eigenvalue.imag}
+                )
+            else:
+                # If it's a real number, append it as is
+                eigenvalues_list.append(eigenvalue)
+
+        return {
+            "largest_eigenvalue_A": largest_eigenvalue_A,
+            "largest_eigenvalue_inverse_A": largest_eigenvalue_inverse_A,
+            "lu_eigenvalues": eigenvalues_list,
+        }
+    except np.linalg.LinAlgError as lae:
+        logger.error(f"Linear algebra error in power method: {str(lae)}")
+        return {
+            "error": "Power method failed. The matrix may be singular or ill-conditioned."
+        }
+    except Exception as e:
+        logger.error(f"Unexpected error in power method: {str(e)}")
+        return {"error": f"Unexpected error in power method: {str(e)}"}
+
+
+@router.post("/solve/{vector_choice}")
+async def solve_system(
+    vector_choice: str, solver: MatrixSolver = Depends(get_matrix_solver)
+):
+    try:
+        if vector_choice not in ["b1", "b2"]:
+            raise ValueError("Invalid vector_choice. Must be 'b1' or 'b2'.")
+
+        solution = solver.solve_multiple_b()
+        result = solution[f"Ax = {vector_choice}"]
+
+        if result["type"] == "unique solution":
+            return {"solution": result["solution"]}
+        elif result["type"] == "infinite solutions":
+            return {"OOPS!!": "The system has infinite solutions."}
+        elif result["type"] == "no solutions":
+            return {"OOPS!!": "No solution exists for the given system."}
+
+    except ValueError as ve:
+        return {"OOPS!!": str(ve)}
+    except np.linalg.LinAlgError as lae:
+        logger.error(f"Linear algebra error solving system: {str(lae)}")
+        return {"OOPS!!": "Failed to solve the system. The matrix may be singular."}
+    except Exception as e:
+        logger.error(f"Error solving system: {str(e)}")
+        return {"OOPS!!": "Unexpected error solving the system"}
+
+
+@router.get("/process-all/")
+async def process_all(solver: MatrixSolver = Depends(get_matrix_solver)):
+    try:
+        # Collect results from individual operations
+        eigenvalues = await get_eigenvalues(solver)
+        determinant = await get_determinant(solver)
+        condition_numbers = await get_condition_number(solver)
+        polynomial_coeffs = await get_polynomial_equation(solver)
+        power_method_results = await power_method(solver)
+
+        # Solutions for both vectors
+        solution_b1 = await solve_system("b1", solver)
+        solution_b2 = await solve_system("b2", solver)
+
+        # Construct the final response
+        combined_response = {
+            "eigenvalues": eigenvalues["eigenvalues"],
+            "determinant": determinant["determinant"],
+            "is_unique": determinant.get(
+                "uniqness"
+            ),  # Assuming is_unique can be derived from determinant
+            "condition_number": condition_numbers["matrix_condition"],
+            "hilbert_condition": condition_numbers["hilbert_condition"],
+            "polynomial_coefficients": polynomial_coeffs["coefficients"],
+            "largest_eigenvalue_A": power_method_results["largest_eigenvalue_A"],
+            "largest_eigenvalue_inverse_A": power_method_results[
+                "largest_eigenvalue_inverse_A"
+            ],
+            "solution_b1": (
+                solution_b1.get("solution")
+                if "solution" in solution_b1
+                else solution_b1
+            ),
+            "solution_b2": (
+                solution_b2.get("solution")
+                if "solution" in solution_b2
+                else solution_b2
+            ),
+        }
+
+        return combined_response
+
+    except np.linalg.LinAlgError as lae:
+        logger.error(f"Linear algebra error processing all operations: {str(lae)}")
+        return {
+            "OOPS!!": "Failed to process all operations. The matrix may be singular or ill-conditioned."
+        }
+    except ValueError as ve:
+        logger.error(f"Value error processing all operations: {str(ve)}")
+        return {"OOPS!!": str(ve)}
+    except Exception as e:
+        logger.error(f"Unexpected error processing all operations: {str(e)}")
+        return {"OOPS": f"Unexpected error processing all operations: {str(e)}"}

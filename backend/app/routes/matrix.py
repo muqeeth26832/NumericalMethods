@@ -61,7 +61,8 @@ async def process_matrix(data: dict):
             result["eigenvalues_error"] = eigenvalues["error"]
         else:
             result["eigenvalues"] = eigenvalues
-        # # Determinant
+
+        # Determinant
         determinant = solver.determinant()
         if isinstance(determinant, dict) and "error" in determinant:
             result["determinant_error"] = determinant["error"]

@@ -25,10 +25,10 @@ async def get_roots_symbolic_legendre_quadrature(n: int = 64):
         )
 
     solver = GaussianQuadratureSolver(n)
-    if n >= 43:
-        roots, weights = solver.gauss_legendre_quadrature()
-    else:
-        roots, weights = solver.symbolic_legendre_quadrature()
+    # if n >= 43:
+    #     roots, weights = solver.gauss_legendre_quadrature()
+    # else:
+    roots, weights = solver.symbolic_legendre_quadrature()
 
     # Optional: print for debugging purposes
     print(roots)

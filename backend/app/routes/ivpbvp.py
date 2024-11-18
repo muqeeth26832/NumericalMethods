@@ -1,63 +1,27 @@
-def explicit_euler(P: float, N: int, step_size: float):
-    y = np.linspace(0, 1, N)  # Grid for spatial variable y
-    u = np.zeros(N)  # Velocity profile initialized to 0
-    for n in range(1, N):
-        u[n] = u[n - 1] + step_size * (P * y[n] - u[n - 1])
-    return u.tolist()
-
-
-def implicit_euler(P: float, N: int, step_size: float):
-    y = np.linspace(0, 1, N)  # Grid for spatial variable y
-    u = np.zeros(N)  # Velocity profile initialized to 0
-    A = np.eye(N) - step_size * P * np.diag(
-        np.ones(N - 1), -1
-    )  # Simplified system matrix
-    for n in range(1, N):
-        u = np.linalg.solve(A, u)  # Solve for u at each timestep
-    return u.tolist()
-
-
-def finite_difference(P: float, N: int):
-    y = np.linspace(0, 1, N)  # Grid for spatial variable y
-    u = np.zeros(N)  # Velocity profile initialized to 0
-    A = np.zeros((N, N))
-    b = np.zeros(N)
-
-    for i in range(1, N - 1):
-        A[i, i - 1] = -1
-        A[i, i] = 2
-        A[i, i + 1] = -1
-        b[i] = P * y[i]  # Assuming a linear source term
-
-    A[0, 0] = A[N - 1, N - 1] = 1  # Boundary conditions
-    u = np.linalg.solve(A, b)  # Solve the linear system
-    return u.tolist()
-
-
-def analytical_solution(P: float, N: int):
-    y = np.linspace(0, 1, N)
-    u = P * y * (1 - y)  # Simplified analytical solution
-    return u
-
-
 from fastapi import APIRouter
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List
 import numpy as np
+from .n import CouettePoiseuilleFlow
 
 router = APIRouter()
 
 
-def compute_solution(p_value: float, N: int):
-    y = np.linspace(0, 1, N)
+def compute_solution(flow_problem: CouettePoiseuilleFlow, p_value: float):
+    """
+    Computes the solutions for a given pressure gradient using the provided flow problem object.
+    """
+    y = flow_problem.y_vals  # Use y values from the flow problem object
 
-    explicit_euler_result = explicit_euler(p_value, N, 0.01)
-    implicit_euler_result = implicit_euler(p_value, N, 0.01)
-    finite_difference_result = finite_difference(p_value, N)
-    analytical_solution_result = analytical_solution(p_value, N)
+    # Calculate results for different numerical methods
+    explicit_euler_result = flow_problem.shooting_method(p_value, "explicit")
+    implicit_euler_result = flow_problem.shooting_method(p_value, "implicit")
+    finite_difference_result = flow_problem.finite_difference(p_value)
 
+    analytical_solution_result = flow_problem.analytical_solution(p_value)
+
+    # Prepare the results for each y-value
     result = []
-
     for i in range(len(y)):
         result.append(
             {
@@ -69,17 +33,34 @@ def compute_solution(p_value: float, N: int):
                 "analytical_solution": analytical_solution_result[i],
             }
         )
+
     return result
 
 
-@router.post("/compute_solutions")
-async def compute_solutions(data: dict):
+class ComputeSolutionsRequest(BaseModel):
+    """
+    Pydantic model to validate the input data for the compute_solutions endpoint.
+    """
 
-    P_values = data["P_values"]
-    N = data["N"]
+    P_values: List[float]  # List of pressure gradients to compute solutions for
+    N: int  # Number of steps in the y-direction
+
+
+@router.post("/compute_solutions")
+async def compute_solutions(data: ComputeSolutionsRequest):
+    """
+    Endpoint to compute solutions for multiple pressure gradients.
+    """
+    P_values = data.P_values
+    N = data.N
+
+    # Create an instance of CouettePoiseuilleFlow with the specified parameters
+    flow_problem = CouettePoiseuilleFlow(L=1.0, U0=1.0, mu=1.0, dy=1.0 / N)
 
     solutions = []
+
     for p in P_values:
-        solution = compute_solution(p, N)
+        solution = compute_solution(flow_problem, p)
         solutions.append(solution)
+
     return {"solutions": solutions}

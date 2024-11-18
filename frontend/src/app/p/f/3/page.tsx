@@ -22,7 +22,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, ArrowRight, Copy, RefreshCw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -30,13 +36,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 const METHODS = {
   explicit_euler: { name: "Explicit Euler", color: "#4f46e5" },
   implicit_euler: { name: "Implicit Euler", color: "#7c3aed" },
-  finite_difference: { name: "Finite Differences", color: "#6366f1" }
+  finite_difference: { name: "Finite Differences", color: "#6366f1" },
 };
 
 export default function CouettePoiseuillePage() {
   const [PValues, setPValues] = useState<number[]>([2]);
   const [N, setN] = useState(100);
-  const [method, setMethod] = useState<"explicit_euler" | "implicit_euler" | "finite_difference">("explicit_euler");
+  const [method, setMethod] = useState<
+    "explicit_euler" | "implicit_euler" | "finite_difference"
+  >("explicit_euler");
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,16 +54,20 @@ export default function CouettePoiseuillePage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.post("http://localhost:8000/api/v1/ivpbvp/compute_solutions", {
-        P_values: PValues,
-        N: N,
-        method: method,
-      });
+      const response = await axios.post(
+        "http://localhost:8000/api/v1/ivpbvp/compute_solutions",
+        {
+          P_values: PValues,
+          N: N,
+          method: method,
+        }
+      );
 
       const solutions = response.data.solutions;
-      if (!solutions || !Array.isArray(solutions)) {
-        throw new Error("Invalid data structure from API");
-      }
+      // if (!solutions || !Array.isArray(solutions)) {
+      //   throw new Error("Invalid data structure from API");
+      // }
+      console.log(solutions);
 
       const transformedData = solutions.flatMap((solution: any) => {
         return solution.map((item: any) => ({
@@ -83,7 +95,8 @@ export default function CouettePoiseuillePage() {
 
   const handleCopy = () => {
     const jsonData = JSON.stringify(data, null, 2);
-    navigator.clipboard.writeText(jsonData)
+    navigator.clipboard
+      .writeText(jsonData)
       .then(() => alert("Data copied to clipboard!"));
   };
 
@@ -91,13 +104,20 @@ export default function CouettePoiseuillePage() {
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 py-8">
       <div className="container mx-auto px-4 max-w-7xl space-y-8">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Couette-Poiseuille Flow Analysis</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            Couette-Poiseuille Flow Analysis
+          </h1>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Interactive visualization and analysis of Couette-Poiseuille flow using different numerical methods
+            Interactive visualization and analysis of Couette-Poiseuille flow
+            using different numerical methods
           </p>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-6"
+        >
           <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto">
             <TabsTrigger value="visualization">Visualization</TabsTrigger>
             <TabsTrigger value="comparison">Method Comparison</TabsTrigger>
@@ -111,14 +131,18 @@ export default function CouettePoiseuillePage() {
                     <ArrowRight className="h-5 w-5 text-blue-500" />
                     Flow Visualization
                   </CardTitle>
-                  <CardDescription>Real-time visualization of flow characteristics</CardDescription>
+                  <CardDescription>
+                    Real-time visualization of flow characteristics
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="relative h-[500px]">
                   {loading ? (
                     <div className="absolute inset-0 flex items-center justify-center bg-gray-50/50">
                       <div className="text-center">
                         <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                        <p className="text-sm text-gray-600">Computing solution...</p>
+                        <p className="text-sm text-gray-600">
+                          Computing solution...
+                        </p>
                       </div>
                     </div>
                   ) : error ? (
@@ -140,12 +164,20 @@ export default function CouettePoiseuillePage() {
                           label={{ value: "Position (y)", position: "bottom" }}
                           tick={{ fill: "#6B7280" }}
                         />
-                        <YAxis 
-                          label={{ value: "Velocity (u)", angle: -90, position: "insideLeft" }}
+                        <YAxis
+                          label={{
+                            value: "Velocity (u)",
+                            angle: -90,
+                            position: "insideLeft",
+                          }}
                           tick={{ fill: "#6B7280" }}
                         />
-                        <Tooltip 
-                          contentStyle={{ backgroundColor: "white", borderRadius: "8px", border: "1px solid #E5E7EB" }}
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "white",
+                            borderRadius: "8px",
+                            border: "1px solid #E5E7EB",
+                          }}
                         />
                         <Legend verticalAlign="top" height={36} />
                         {Object.entries(METHODS).map(([key, value]) => (
@@ -199,11 +231,15 @@ export default function CouettePoiseuillePage() {
                     <ArrowRight className="h-5 w-5 text-blue-500" />
                     Parameters
                   </CardTitle>
-                  <CardDescription>Adjust flow parameters and numerical method</CardDescription>
+                  <CardDescription>
+                    Adjust flow parameters and numerical method
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-4">
-                    <Label className="text-sm font-semibold">Pressure Gradient (P)</Label>
+                    <Label className="text-sm font-semibold">
+                      Pressure Gradient (P)
+                    </Label>
                     <div className="flex items-center space-x-4">
                       <Slider
                         min={-4}
@@ -223,7 +259,9 @@ export default function CouettePoiseuillePage() {
                   </div>
 
                   <div className="space-y-4">
-                    <Label className="text-sm font-semibold">Grid Points (N)</Label>
+                    <Label className="text-sm font-semibold">
+                      Grid Points (N)
+                    </Label>
                     <Input
                       type="number"
                       value={N}
@@ -234,7 +272,9 @@ export default function CouettePoiseuillePage() {
                   </div>
 
                   <div className="space-y-4">
-                    <Label className="text-sm font-semibold">Numerical Method</Label>
+                    <Label className="text-sm font-semibold">
+                      Numerical Method
+                    </Label>
                     <Select
                       value={method}
                       onValueChange={(value) => setMethod(value as any)}
@@ -252,9 +292,9 @@ export default function CouettePoiseuillePage() {
                     </Select>
                   </div>
 
-                  <Button 
+                  <Button
                     className="w-full"
-                    onClick={fetchData} 
+                    onClick={fetchData}
                     disabled={loading}
                   >
                     {loading ? (
@@ -276,7 +316,8 @@ export default function CouettePoiseuillePage() {
               <CardHeader>
                 <CardTitle>Numerical Methods Comparison</CardTitle>
                 <CardDescription>
-                  All three numerical methods plotted against the analytical solution
+                  All three numerical methods plotted against the analytical
+                  solution
                 </CardDescription>
               </CardHeader>
               <CardContent className="h-[600px]">
@@ -292,7 +333,13 @@ export default function CouettePoiseuillePage() {
                       domain={[0, 1]}
                       label={{ value: "Position (y)", position: "bottom" }}
                     />
-                    <YAxis label={{ value: "Velocity (u)", angle: -90, position: "insideLeft" }} />
+                    <YAxis
+                      label={{
+                        value: "Velocity (u)",
+                        angle: -90,
+                        position: "insideLeft",
+                      }}
+                    />
                     <Tooltip />
                     <Legend verticalAlign="top" height={36} />
                     {Object.entries(METHODS).map(([key, value]) => (
@@ -324,4 +371,3 @@ export default function CouettePoiseuillePage() {
     </div>
   );
 }
-

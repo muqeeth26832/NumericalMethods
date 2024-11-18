@@ -88,51 +88,47 @@ const VectorInput = ({
   );
 };
 
-// Custom component for displaying results
-// const ResultCard = ({ title, data }: { title: string; data: any }) => (
-//   <Card className="mb-4">
-//     <CardHeader>
-//       <CardTitle>{title}</CardTitle>
-//     </CardHeader>
-//     <CardContent>
-//       {typeof data === "object" ? (
-//         <pre className="bg-gray-100 p-2 rounded overflow-x-auto text-black">
-//           {data.map((item: any) => {
-//             return JSON.stringify(item, null, 2);
-//           })}
-//           {/* {JSON.stringify(data, null, 2)} */}
-//         </pre>
-//       ) : (
-//         <p>{data.toString()}</p>
-//       )}
-//     </CardContent>
-//   </Card>
-// );
-
-const ResultCard = ({ title, data }: { title: string; data: any }) => (
-  <Card className="mb-4">
-    <CardHeader>
-      <CardTitle>{title}</CardTitle>
-    </CardHeader>
-    <CardContent>
-      {Array.isArray(data) ? (
-        // If data is an array, map over the items
-        <pre className="bg-gray-100 p-2 rounded overflow-x-auto text-black">
-          {data.map((item, index) => (
-            <div key={index}>{JSON.stringify(item, null, 2)}</div>
-          ))}
-        </pre>
-      ) : typeof data === "object" && data !== null ? (
-        // If it's an object, stringify the entire object
-        <pre className="bg-gray-100 p-2 rounded overflow-x-auto text-black">
-          {JSON.stringify(data, null, 2)}
-        </pre>
-      ) : (
-        // If it's neither array nor object, display as a simple string
-        <p>{data.toString()}</p>
-      )}
-    </CardContent>
-  </Card>
+const ResultCard = ({ results }: { results: any }) => (
+  <div className="space-y-4">
+    {Object.entries(results).map(([key, value]) => (
+      <Card key={key} className="mb-4">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">
+            {key.replace(/_/g, " ")}{" "}
+            {/* Convert snake_case to human-readable text */}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {Array.isArray(value) ? (
+            <div className="space-y-2">
+              {value.map((item, index) => (
+                <div key={index} className="p-2 bg-secondary rounded">
+                  <pre className="whitespace-pre-wrap break-words text-white">
+                    {JSON.stringify(item, null, 2)}
+                  </pre>
+                </div>
+              ))}
+            </div>
+          ) : typeof value === "object" && value !== null ? (
+            <div className="space-y-2">
+              {Object.entries(value).map(([subKey, subValue]) => (
+                <div key={subKey} className="p-2 bg-secondary rounded">
+                  <strong className="text-secondary-foreground">
+                    {subKey}:
+                  </strong>{" "}
+                  <pre className=" text-white whitespace-pre-wrap break-words mt-1">
+                    {JSON.stringify(subValue, null, 2)}
+                  </pre>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-secondary-foreground">{value.toString()}</p>
+          )}
+        </CardContent>
+      </Card>
+    ))}
+  </div>
 );
 
 export default function LinearAlgebraSolver() {
@@ -162,6 +158,7 @@ export default function LinearAlgebraSolver() {
         data
       );
       setResults(response.data);
+
       console.log("Results received:", response.data);
     } catch (err) {
       setError("Failed to process calculations");
@@ -208,8 +205,11 @@ export default function LinearAlgebraSolver() {
           )}
         </div>
       </CardContent>
+      ---
       <CardFooter>
-        <div className="w-full space-y-4">
+        {Object.keys(results).length > 0 && <ResultCard results={results} />}
+
+        {/* <div className="w-full space-y-4">
           {results.eigenvalues && (
             <ResultCard title="Eigenvalues" data={results.eigenvalues} />
           )}
@@ -249,7 +249,7 @@ export default function LinearAlgebraSolver() {
               data={results.solutions}
             />
           )}
-        </div>
+        </div> */}
       </CardFooter>
     </Card>
   );

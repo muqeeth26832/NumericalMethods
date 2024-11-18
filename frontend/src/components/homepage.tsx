@@ -18,7 +18,8 @@ export default function HomePage() {
       title: "Assignment-1",
       description: "Numerical Methods Calculator",
       icon: <Calculator className="h-8 w-8" />,
-      link: "https://numericalmuqeeth.netlify.app/",
+      // link: "https://numericalmuqeeth.netlify.app/",
+      link: "/p/f/1",
     },
     {
       title: "Assignment-2",
@@ -32,7 +33,7 @@ export default function HomePage() {
       title: "Assignment-3",
       description: "IVP and BVP Solver",
       icon: <Calculator className="h-8 w-8" />,
-      link: "/p/f/4", // Replace with the actual link for Assignment-3
+      link: "/p/f/3", // Replace with the actual link for Assignment-3
     },
   ];
 

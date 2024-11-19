@@ -46,7 +46,7 @@ export default function HomePage() {
     },
     {
       name: "Soham Mashetty",
-      image: "/images/soham.jpg", // Replace with actual image URL
+      image: "/images/soham2.jpg", // Replace with actual image URL
       description: "Soham Mashetty is a skilled problem solver.",
     },
     {

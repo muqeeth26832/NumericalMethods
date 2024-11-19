@@ -95,6 +95,41 @@ def finite_difference(P, mu, dy, N, U0):
     return u
 
 
+#
+def system_equations(u, v, P):
+    du = v
+    dv = -P
+    return du, dv
+
+
+# Function to compute the Jacobian programmatically using finite differences
+
+
+def compute_jacobian(u, v, P, delta=1e-5):
+    # Create the Jacobian matrix
+    J = np.zeros((2, 2))
+
+    # Evaluate the system at the current state
+    f0 = system_equations(u, v, P)
+
+    # Compute partial derivatives using finite differences
+    for i in range(2):  # Two variables: u and v
+        # Perturb uHH
+        if i == 0:  # Perturb u
+            f1 = system_equations(u + delta, v, P)
+            J[0][0] = (f1[0] - f0[0]) / delta  # du/du
+            J[1][0] = (f1[1] - f0[1]) / delta  # dv/du
+        else:  # Perturb v
+            f1 = system_equations(u, v + delta, P)
+            J[0][1] = (f1[0] - f0[0]) / delta  # du/dv
+            J[1][1] = (f1[1] - f0[1]) / delta  # dv/dv
+
+    return J
+
+
+#
+
+
 from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import List, Optional
@@ -131,10 +166,43 @@ def compute_solution(p_value: float, N: int, mu=1.0, L=1.0, U0=1.0, dy=0.01):
 async def compute_solutions(data: dict):
 
     P_values = data["P_values"]
-    N = data["N"]
+    stepsize = data["step_size"]
+
+    L = 1.0  # Length of the domain (can also be passed dynamically if needed)
+    mu = 1.0
+    U0 = 1.0
+
+    if stepsize <= 0 or stepsize > L:
+        return {
+            "error": "Invalid stepsize. It must be positive and less than or equal to the domain length."
+        }
+    # Compute the number of grid points
+    N = int(L / stepsize)
 
     solutions = []
     for p in P_values:
-        solution = compute_solution(p, N)
+        solution = compute_solution(p, N, mu, L, U0, stepsize)
         solutions.append(solution)
     return {"solutions": solutions}
+
+
+@router.post("/jacobian")
+async def compute_jacobian_matrix(data: dict):
+    """
+    Compute the Jacobian matrix for the given velocity, derivative, and pressure gradient.
+
+    Parameters:
+        data: JSON payload containing `u`, `v`, `P`, and optional `delta`.
+
+    Returns:
+        2x2 Jacobian matrix as a JSON response.
+    """
+    u = data.get("u", 0.0)  # Default to 0.0 if not provided
+    v = data.get("v", 0.0)  # Default to 0.0 if not provided
+    P = data.get("P", 0.0)  # Default to 0.0 if not provided
+    delta = data.get("delta", 1e-5)  # Default perturbation
+
+    # Compute the Jacobian matrix
+    J = compute_jacobian(u, v, P, delta)
+
+    return {"jacobian": J.tolist()}

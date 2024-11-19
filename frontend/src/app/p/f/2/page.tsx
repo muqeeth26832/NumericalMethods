@@ -104,6 +104,7 @@ export default function GaussianQuadrature() {
     for (let n = 1; n <= 64 && animationRef.current; n++) {
       try {
         // Fetch data for both methods
+        setInputValue(n.toString());
         const gaussResult = await getWeightVsRoots(n, "gauss-legendre");
         const symbolicResult = await getWeightVsRoots(n, "symbolic-legendre");
 
@@ -150,6 +151,7 @@ export default function GaussianQuadrature() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {inputValue}
           <div className="flex space-x-4">
             <Input
               type="number"
@@ -214,4 +216,3 @@ export default function GaussianQuadrature() {
     </div>
   );
 }
-

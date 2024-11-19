@@ -68,7 +68,3 @@ class GaussianQuadratureSolver:
 
         return roots, weights
 
-
-# Example usage
-quadrature_solver = GaussianQuadratureSolver(n=5)  # Example with n=5
-roots, weights = quadrature_solver.symbolic_legendre_quadrature()

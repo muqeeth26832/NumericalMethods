@@ -19,7 +19,7 @@ export default function HomePage() {
       description: "Numerical Methods Calculator",
       icon: <Calculator className="h-8 w-8" />,
       // link: "https://numericalmuqeeth.netlify.app/",
-      link: "/p/f/1",
+      link: "/old",
     },
     {
       title: "Assignment-2",

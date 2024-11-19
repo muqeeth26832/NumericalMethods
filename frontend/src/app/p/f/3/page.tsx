@@ -55,7 +55,7 @@ export default function CouettePoiseuillePage() {
     setError(null);
     try {
       const response = await axios.post(
-        "http://localhost:8000/api/v1/ivpbvp/compute_solutions",
+        "http://localhost:8000/api/v1/ivpbvp/solve",
         {
           P_values: PValues,
           N: N,

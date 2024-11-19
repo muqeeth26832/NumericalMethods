@@ -25,11 +25,13 @@ class AccurateMatrixSolver:
         Raises:
         - ValueError: If the matrix is singular (determinant is zero).
         """
-        self.P, self.L, self.U = lu(self.A)
-
-        # Check if the matrix is singular by looking at the determinant of U
-        if np.isclose(np.linalg.det(self.U), 0):
-            raise ValueError("Matrix is singular, LU decomposition failed.")
+        if np.isclose(np.linalg.det(self.A), 0):
+            return {"error": "Matrix is singular, LU decomposition failed."}
+        try:
+            self.P, self.L, self.U = lu(self.A)
+            return {"P": self.P.tolist(), "L": self.L.tolist(), "U": self.U.tolist()}
+        except Exception as e:
+            return {"error": f"LU decomposition failed: {str(e)}"}
 
     def eigenvalues_via_lu(self):
         """
@@ -107,7 +109,7 @@ class AccurateMatrixSolver:
         - tol: Convergence tolerance.
 
         Returns:
-        - The largest (or smallest if inverse=True) eigenvalue.
+        - The largest (or smallest if inverse=True) eigenvalue
         """
         A = np.linalg.inv(self.A) if inverse else self.A
         x = np.random.rand(self.n)

@@ -28,7 +28,7 @@ export default function Navbar() {
         >
           Home
         </Link>
-        <Link
+        {/* <Link
           href="/about"
           className="text-blue-400 dark:hover:text-blue-500 hover:underline"
         >
@@ -39,7 +39,7 @@ export default function Navbar() {
           className="text-blue-400 dark:hover:text-blue-500 hover:underline"
         >
           Contact
-        </Link>
+        </Link> */}
         <Link
           href="/resources"
           className="text-blue-400 dark:hover:text-blue-500 hover:underline"
@@ -53,7 +53,6 @@ export default function Navbar() {
           Docs
         </Link>
       </nav>
-      
       {/* Mobile Menu Toggle */}
       <div className="lg:hidden flex items-center">
         <button onClick={toggleMenu} className="text-white">

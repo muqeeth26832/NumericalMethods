@@ -174,6 +174,12 @@ async def power_method(solver: MatrixSolver = Depends(get_matrix_solver)):
         }
     except np.linalg.LinAlgError as lae:
         logger.error(f"Linear algebra error in power method: {str(lae)}")
+        if solver.determinant() == 0:
+            return {
+                "error": "Power method failed. The matrix is singular.",
+                "largest_eigenvalue_A": 0 ,
+                "largest_eigenvalue_inverse_A": 0,
+            }
         return {
             "error": "Power method failed. The matrix may be singular or ill-conditioned."
         }
@@ -219,6 +225,7 @@ async def process_all(solver: MatrixSolver = Depends(get_matrix_solver)):
         condition_numbers = await get_condition_number(solver)
         polynomial_coeffs = await get_polynomial_equation(solver)
         power_method_results = await power_method(solver)
+        print(power_method_results)
 
         # Solutions for both vectors
         solution_b1 = await solve_system("b1", solver)
@@ -249,7 +256,7 @@ async def process_all(solver: MatrixSolver = Depends(get_matrix_solver)):
                 else solution_b2
             ),
         }
-
+        print(combined_response)
         return combined_response
 
     except np.linalg.LinAlgError as lae:

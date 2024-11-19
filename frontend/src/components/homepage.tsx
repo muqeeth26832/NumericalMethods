@@ -19,7 +19,7 @@ export default function HomePage() {
       description: "Numerical Methods Calculator",
       icon: <Calculator className="h-8 w-8" />,
       // link: "https://numericalmuqeeth.netlify.app/",
-      link: "/old",
+      link: "/new",
     },
     {
       title: "Assignment-2",
@@ -40,36 +40,36 @@ export default function HomePage() {
   // Updated team of 6
   const team = [
     {
-      name: "Friend 1",
-      image: "/images/friend1.jpg", // Replace with actual image URL
-      description: "Friend 1 is a great teammate and has a passion for math.",
+      name: "Md Abdul Muqeeth",
+      image: "/images/muqeeth.jpeg", // Replace with actual image URL
+      description: "Md Abdul Muqeeth is a passionate developer.",
     },
     {
-      name: "Friend 2",
-      image: "/images/friend2.jpg", // Replace with actual image URL
-      description: "Friend 2 loves programming and solving complex problems.",
+      name: "Soham Mashetty",
+      image: "/images/soham.jpg", // Replace with actual image URL
+      description: "Soham Mashetty is a skilled problem solver.",
     },
     {
-      name: "Friend 3",
-      image: "/images/friend3.jpg", // Replace with actual image URL
-      description: "Friend 3 enjoys exploring algorithms and AI.",
+      name: "Anushka Aggarwal",
+      image: "/images/Anushka.jpg", // Replace with actual image URL
+      description: "Anushka Aggarwal is a problem solver and loves coding.",
     },
     {
-      name: "Friend 4",
-      image: "/images/friend4.jpg", // Replace with actual image URL
+      name: "Rishikesh Kasi Reddy",
+      image: "/images/kasi.png", // Replace with actual image URL
       description:
-        "Friend 4 is a creative thinker and excels in problem-solving.",
+        "pythonic coder and problem solver, Rishikesh Kasi Reddy",
     },
     {
-      name: "Friend 5",
-      image: "/images/friend5.jpg", // Replace with actual image URL
-      description: "Friend 5 is passionate about data science and AI.",
+      name: "Rithwik",
+      image: "/images/rithwik.png", // Replace with actual image URL
+      description: "developer and problem solver, Rithwik",
     },
     {
-      name: "Friend 6",
-      image: "/images/friend6.jpg", // Replace with actual image URL
+      name: "Kamal Koushik",
+      image: "/images/kamal.png", // Replace with actual image URL
       description:
-        "Friend 6 is an expert in web development and cloud computing.",
+        "python expert and problem solver, Kamal Koushik (he can hack you)",
     },
   ];
 

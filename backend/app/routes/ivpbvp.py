@@ -18,22 +18,91 @@ y_vals = np.linspace(0, L, N)
 def analytical_solution(P, y, L, U0):
     return (-P / (2 * mu) * y**2) + (P * y / (2 * mu) + U0 * y / L)
 
+import numpy as np
+
+def explicit_euler(y0, v0, step_size, y_end, P):
+    n_steps = int(y_end / step_size) + 1
+    y_values = []
+    u_values = []
+
+    # Initialize values
+    y = 0
+    u = y0
+    v = v0
+
+    for _ in range(n_steps):
+        y_values.append(y)
+        u_values.append(u)
+
+        # Update using Explicit Euler method
+        u_new = u + step_size * v
+        v_new = v - step_size * P
+
+        # Update the values
+        u = u_new
+        v = v_new
+        y += step_size
+
+    return y_values, u_values
+
 
 def explicit_euler_ivp(y_range, u0, u0_prime, P, mu, dy):
+    """Improved explicit Euler method using central difference"""
     N = len(y_range)
     u = np.zeros(N)
     u_prime = np.zeros(N)
+    
+    # Initial conditions
     u[0] = u0
     u_prime[0] = u0_prime
-
-    for i in range(1, N):
-        u[i] = u[i - 1] + dy * u_prime[i - 1]
-        u_prime[i] = u_prime[i - 1] + dy * (-P / mu)
-
+    
+    # First point using forward Euler
+    u[1] = u[0] + dy * u0_prime
+    u_prime[1] = u_prime[0] + dy * (-P/mu)
+    
+    # Remaining points using central difference
+    for i in range(2, N):
+        u_prime[i] = u_prime[i-1] + dy * (-P/mu)
+        u[i] = 2*u[i-1] - u[i-2] + (dy**2 * (-P/mu))
+    
     return u
 
+def implicit_euler(y0, v0, step_size, y_end, P):
+
+    n_steps = int(y_end / step_size) + 1
+    y_values = []
+    u_values = []
+
+    # Initialize values
+    y = 0
+    u = y0
+    v = v0
+
+    for _ in range(n_steps):
+        y_values.append(y)
+        u_values.append(u)
+
+        # Implicit Euler update
+        # Solve for v_next first
+        v_next = v - step_size * P
+        # Use v_next to update u_next
+        u_next = u + step_size * v_next
+
+        # Update values
+        u = u_next
+        v = v_next
+        y += step_size
+
+    return y_values, u_values
 
 def implicit_euler_ivp(y_range, u0, u0_prime, P, mu, dy):
+    # Use explicit_euler for integration
+    y_end = y_range[-1] - y_range[0]  # Total range in y
+    y_values, u_values = explicit_euler(u0, u0_prime, dy, y_end, P / mu)
+
+    # Convert results to arrays
+    u = np.array(u_values)
+    return u
     N = len(y_range)
     u = np.zeros(N)
     u_prime = np.zeros(N)
